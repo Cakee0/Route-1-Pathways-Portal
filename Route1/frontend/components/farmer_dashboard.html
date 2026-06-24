@@ -1,0 +1,173 @@
+<!-- components/farmer_dashboard.html — Farmer crop inventory management -->
+
+<div class="dashboard farmer-dashboard">
+
+    <!-- Page header -->
+    <div class="page-header">
+        <div>
+            <h2>My Crop Listings</h2>
+            <p class="sub-text" id="farmerSubtitle">Manage your available produce</p>
+        </div>
+        <button class="btn btn-primary" id="toggleAddCropBtn">+ Add New Crop</button>
+    </div>
+
+    <!-- ── ADD CROP FORM (collapsible) ──────────────────────────────────── -->
+    <div class="card hidden" id="addCropForm">
+        <h3>Add a New Crop Listing</h3>
+        <form id="addCropFormEl" novalidate>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="cropName">Crop Name *</label>
+                    <input type="text" id="cropName" placeholder="e.g. Sweet Corn" required />
+                </div>
+                <div class="form-group">
+                    <label for="cropQty">Quantity *</label>
+                    <input type="text" id="cropQty" placeholder="e.g. 200" required />
+                </div>
+                <div class="form-group">
+                    <label for="cropUnit">Unit</label>
+                    <select id="cropUnit">
+                        <option value="lbs">lbs</option>
+                        <option value="kg">kg</option>
+                        <option value="bushels">bushels</option>
+                        <option value="boxes">boxes</option>
+                        <option value="crates">crates</option>
+                        <option value="bags">bags</option>
+                        <option value="units">units</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="cropPrice">Price per Unit ($)</label>
+                    <input type="number" id="cropPrice" placeholder="Leave blank = price on request" step="0.01"
+                        min="0" />
+                </div>
+                <div class="form-group">
+                    <label for="cropDesc">Description (optional)</label>
+                    <input type="text" id="cropDesc" placeholder="Organic, freshly harvested…" />
+                </div>
+            </div>
+
+            <!-- Checkboxes row -->
+            <div class="checkbox-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="canTransport" />
+                    <span>I can provide transportation</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="needTransport" />
+                    <span>I need transportation help</span>
+                </label>
+                <label class="checkbox-label donation-check">
+                    <input type="checkbox" id="donationEligible" />
+                    <span>Donation-eligible (food shelves)</span>
+                </label>
+            </div>
+
+            <p class="error-msg hidden" id="addCropError"></p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Listing</button>
+                <button type="button" class="btn btn-ghost" id="cancelAddCropBtn">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── CROP LISTINGS TABLE ──────────────────────────────────────────── -->
+    <div class="card">
+        <div id="cropListingsContainer">
+            <div class="loading-state" id="cropListLoading">
+                <div class="spinner"></div>
+                <p>Loading your listings…</p>
+            </div>
+            <div class="empty-state hidden" id="cropListEmpty">
+                <span>🌱</span>
+                <p>You have no crop listings yet. Add your first one above!</p>
+            </div>
+            <div class="table-wrapper hidden" id="cropListTable">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Crop</th>
+                            <th>Quantity</th>
+                            <th>Price / unit</th>
+                            <th>Transport</th>
+                            <th>Donation</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cropTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── EDIT CROP MODAL ───────────────────────────────────────────────── -->
+<div class="modal-backdrop hidden" id="editCropModal">
+    <div class="modal card">
+        <h3>Edit Crop Listing</h3>
+        <form id="editCropFormEl" novalidate>
+            <input type="hidden" id="editCropId" />
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editCropName">Crop Name</label>
+                    <input type="text" id="editCropName" required />
+                </div>
+                <div class="form-group">
+                    <label for="editCropQty">Quantity</label>
+                    <input type="text" id="editCropQty" required />
+                </div>
+                <div class="form-group">
+                    <label for="editCropUnit">Unit</label>
+                    <select id="editCropUnit">
+                        <option value="lbs">lbs</option>
+                        <option value="kg">kg</option>
+                        <option value="bushels">bushels</option>
+                        <option value="boxes">boxes</option>
+                        <option value="crates">crates</option>
+                        <option value="bags">bags</option>
+                        <option value="units">units</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editCropPrice">Price / unit ($)</label>
+                    <input type="number" id="editCropPrice" step="0.01" min="0" />
+                </div>
+                <div class="form-group">
+                    <label for="editCropDesc">Description</label>
+                    <input type="text" id="editCropDesc" />
+                </div>
+            </div>
+            <div class="checkbox-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="editCanTransport" />
+                    <span>Can provide transport</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="editNeedTransport" />
+                    <span>Needs transport</span>
+                </label>
+                <label class="checkbox-label donation-check">
+                    <input type="checkbox" id="editDonationEligible" />
+                    <span>Donation-eligible</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="editIsAvailable" />
+                    <span>Available</span>
+                </label>
+            </div>
+            <p class="error-msg hidden" id="editCropError"></p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-ghost" id="closeEditModal">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>

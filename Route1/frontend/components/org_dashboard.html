@@ -1,0 +1,93 @@
+<!-- components/org_dashboard.html — Organization browse & filter view -->
+
+<div class="dashboard browse-dashboard">
+
+    <div class="page-header">
+        <div>
+            <h2 id="browseHeading">Browse Farmers</h2>
+            <p class="sub-text" id="browseSubtitle">Find local Minnesota farmers with available crops</p>
+        </div>
+    </div>
+
+    <div class="browse-layout">
+
+        <!-- ── FILTERS SIDEBAR ────────────────────────────────────────────── -->
+        <aside class="filters-sidebar card">
+            <h3>Filters</h3>
+            <p class="sub-text">All filters are optional</p>
+
+            <div class="form-group">
+                <label for="filterCrop">Crop Type</label>
+                <input type="text" id="filterCrop" placeholder="e.g. Tomatoes" />
+            </div>
+
+            <div class="form-group">
+                <label for="filterRegion">MN Region</label>
+                <select id="filterRegion">
+                    <option value="">All Regions</option>
+                    <option value="Twin Cities Metro">Twin Cities Metro</option>
+                    <option value="Central Minnesota">Central Minnesota</option>
+                    <option value="Southern Minnesota">Southern Minnesota</option>
+                    <option value="Northern Minnesota">Northern Minnesota</option>
+                    <option value="Northwest Minnesota">Northwest Minnesota</option>
+                    <option value="Southwest Minnesota">Southwest Minnesota</option>
+                    <option value="Southeast Minnesota">Southeast Minnesota</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="filterCity">City</label>
+                <input type="text" id="filterCity" placeholder="e.g. Rochester" />
+            </div>
+
+            <div class="form-row price-row">
+                <div class="form-group">
+                    <label for="filterMinPrice">Min $ / unit</label>
+                    <input type="number" id="filterMinPrice" placeholder="0" step="0.01" min="0" />
+                </div>
+                <div class="form-group">
+                    <label for="filterMaxPrice">Max $ / unit</label>
+                    <input type="number" id="filterMaxPrice" placeholder="Any" step="0.01" min="0" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="filterTransport" />
+                    <span>Farmer can provide transport</span>
+                </label>
+            </div>
+
+            <!-- Only shown for food shelf accounts (set by app.js) -->
+            <div class="form-group" id="donationFilterGroup">
+                <label class="checkbox-label donation-check">
+                    <input type="checkbox" id="filterDonation" />
+                    <span>Donation-eligible only</span>
+                </label>
+            </div>
+
+            <button class="btn btn-primary btn-block" id="applyFiltersBtn">Search</button>
+            <button class="btn btn-ghost btn-block" id="clearFiltersBtn">Clear Filters</button>
+        </aside>
+
+        <!-- ── RESULTS AREA ───────────────────────────────────────────────── -->
+        <main class="browse-results">
+            <div class="results-header">
+                <span id="resultCount" class="result-count"></span>
+            </div>
+
+            <div class="loading-state" id="browseLoading">
+                <div class="spinner"></div>
+                <p>Searching farmers…</p>
+            </div>
+
+            <div class="empty-state hidden" id="browseEmpty">
+                <span>🔍</span>
+                <p>No farmers match your filters. Try broadening your search.</p>
+            </div>
+
+            <div id="farmerGrid" class="farmer-grid"></div>
+        </main>
+
+    </div>
+</div>

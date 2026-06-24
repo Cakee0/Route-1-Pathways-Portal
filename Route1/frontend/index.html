@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Route 1 Pathways — Minnesota Food Rescue Marketplace</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ── Sticky header (populated by app.js after auth state is known) ── -->
+  <header class="site-header" id="siteHeader">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon">🌾</span>
+        <div class="brand-text">
+          <span class="brand-name">Route&nbsp;<strong>1</strong></span>
+          <span class="brand-sub">Pathways</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── SPA mount point ────────────────────────────────────────────────── -->
+  <main class="main-content" id="app">
+    <!-- Content injected here by app.js via navigate() -->
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading Route 1 Pathways…</p>
+    </div>
+  </main>
+
+  <!-- ── Toast notification ─────────────────────────────────────────────── -->
+  <div id="toast" class="toast-hide" role="alert" aria-live="polite"></div>
+
+  <!-- ── SPA logic ──────────────────────────────────────────────────────── -->
+  <script src="app.js?v=20260331"></script>
+</body>
+
+</html>

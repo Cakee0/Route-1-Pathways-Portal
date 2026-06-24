@@ -1,0 +1,148 @@
+<!-- components/profile_settings.html — Profile Settings page for all user types -->
+
+<div class="dashboard profile-page">
+
+    <div class="page-header">
+        <div>
+            <h2>Profile Settings</h2>
+            <p class="sub-text" id="profileSubtitle">Manage your account information</p>
+        </div>
+        <button class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+    </div>
+
+    <div class="profile-layout">
+
+        <!-- ── LEFT: PROFILE FORM ────────────────────────────────────────────── -->
+        <div class="profile-main">
+
+            <div class="card">
+                <h3 class="card-title">Personal Information</h3>
+                <p class="card-sub">Update your name, location, and contact details.</p>
+
+                <form id="profileFormEl" novalidate>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="profileFullName">Full Name</label>
+                            <input type="text" id="profileFullName" placeholder="Jane Doe" />
+                        </div>
+                        <div class="form-group" id="orgNameGroup">
+                            <label for="profileOrgName">Organization / Farm Name</label>
+                            <input type="text" id="profileOrgName" placeholder="Green Valley Farm" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="profileCity">City</label>
+                            <input type="text" id="profileCity" placeholder="Minneapolis" />
+                        </div>
+                        <div class="form-group">
+                            <label for="profileRegion">MN Region</label>
+                            <select id="profileRegion">
+                                <option value="">Select Region</option>
+                                <option value="Twin Cities Metro">Twin Cities Metro</option>
+                                <option value="Central Minnesota">Central Minnesota</option>
+                                <option value="Southern Minnesota">Southern Minnesota</option>
+                                <option value="Northern Minnesota">Northern Minnesota</option>
+                                <option value="Northwest Minnesota">Northwest Minnesota</option>
+                                <option value="Southwest Minnesota">Southwest Minnesota</option>
+                                <option value="Southeast Minnesota">Southeast Minnesota</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="profilePhone">Phone Number</label>
+                        <input type="tel" id="profilePhone" placeholder="(612) 555-0100" />
+                    </div>
+
+                    <p class="success-msg hidden" id="profileSuccess">Profile saved successfully!</p>
+                    <p class="error-msg hidden" id="profileError"></p>
+                </form>
+            </div>
+
+            <!-- ── NOTIFICATION PREFERENCES (consumers only) ─────────────────── -->
+            <div class="card hidden" id="notifPrefsCard">
+                <h3 class="card-title">Donation Notifications</h3>
+                <p class="card-sub">Get notified when donation opportunities match your preferences.</p>
+
+                <div class="toggle-row">
+                    <div>
+                        <strong>Enable Donation Notifications</strong>
+                        <p class="muted">Notify me when a new donation opportunity is available</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="donationNotifToggle" />
+                        <span class="toggle-track"></span>
+                    </label>
+                </div>
+
+                <div id="donationPriceRange" class="price-range-group hidden">
+                    <p class="form-label-hint">Notify me only for donations in this price range:</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="donationMinPrice">Min Amount ($)</label>
+                            <input type="number" id="donationMinPrice" placeholder="0" step="0.01" min="0" />
+                        </div>
+                        <div class="form-group">
+                            <label for="donationMaxPrice">Max Amount ($)</label>
+                            <input type="number" id="donationMaxPrice" placeholder="Any" step="0.01" min="0" />
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="divider" />
+
+                <div class="toggle-row">
+                    <div>
+                        <strong>Enable Group Donation Notifications</strong>
+                        <p class="muted">Notify me when group donations are created or need one more donor</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="groupDonationNotifToggle" />
+                        <span class="toggle-track"></span>
+                    </label>
+                </div>
+
+                <div class="form-actions" style="margin-top:1.5rem;">
+                    <button class="btn btn-primary" id="saveNotifPrefsBtn">Save Notification Preferences</button>
+                </div>
+                <p class="success-msg hidden" id="notifSuccess">Notification preferences saved!</p>
+                <p class="error-msg hidden" id="notifError"></p>
+            </div>
+
+        </div>
+
+        <!-- ── RIGHT: ACCOUNT INFO ───────────────────────────────────────────── -->
+        <aside class="profile-sidebar">
+            <div class="card account-info-card">
+                <h3 class="card-title">Account</h3>
+                <div class="account-info-row">
+                    <span class="account-label">Email</span>
+                    <span class="account-value" id="profileEmail">—</span>
+                </div>
+                <div class="account-info-row">
+                    <span class="account-label">Role</span>
+                    <span class="account-value" id="profileRole">—</span>
+                </div>
+                <div class="account-info-row">
+                    <span class="account-label">Member since</span>
+                    <span class="account-value" id="profileSince">—</span>
+                </div>
+            </div>
+
+            <!-- Points summary card — consumers only -->
+            <div class="card hidden" id="profilePointsCard">
+                <h3 class="card-title">Your Points</h3>
+                <div class="points-summary-mini">
+                    <span class="points-big" id="profilePointsTotal">0</span>
+                    <span class="points-label">points earned</span>
+                </div>
+                <button class="btn btn-ghost btn-block" id="goToPointsBtn" style="margin-top:1rem;">
+                    View Rewards →
+                </button>
+            </div>
+        </aside>
+
+    </div>
+</div>

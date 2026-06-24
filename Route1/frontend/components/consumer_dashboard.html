@@ -1,0 +1,208 @@
+<!-- components/consumer_dashboard.html — Consumer browse & filter view -->
+
+<div class="dashboard browse-dashboard">
+
+    <div class="page-header">
+        <div>
+            <h2 id="browseHeading">Browse Farmers</h2>
+            <p class="sub-text" id="browseSubtitle">Find local Minnesota farmers with available produce</p>
+        </div>
+    </div>
+
+    <!-- ── VIEW TABS ─────────────────────────────────────────────────────── -->
+    <div class="consumer-view-tabs">
+        <button class="consumer-tab active" id="tabBrowse" data-view="browse">🌾 Browse Farmers</button>
+        <button class="consumer-tab" id="tabDonate" data-view="donate">🎁 Donation Opportunities</button>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         VIEW: BROWSE FARMERS
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="viewBrowse" class="consumer-view-panel">
+        <div class="browse-layout">
+
+            <!-- ── FILTERS SIDEBAR ────────────────────────────────────────────── -->
+            <aside class="filters-sidebar card">
+                <h3>Filters</h3>
+                <p class="sub-text">All filters are optional</p>
+
+                <div class="form-group">
+                    <label for="filterCrop">Crop Type</label>
+                    <input type="text" id="filterCrop" placeholder="e.g. Potatoes" />
+                </div>
+
+                <div class="form-group">
+                    <label for="filterRegion">MN Region</label>
+                    <select id="filterRegion">
+                        <option value="">All Regions</option>
+                        <option value="Twin Cities Metro">Twin Cities Metro</option>
+                        <option value="Central Minnesota">Central Minnesota</option>
+                        <option value="Southern Minnesota">Southern Minnesota</option>
+                        <option value="Northern Minnesota">Northern Minnesota</option>
+                        <option value="Northwest Minnesota">Northwest Minnesota</option>
+                        <option value="Southwest Minnesota">Southwest Minnesota</option>
+                        <option value="Southeast Minnesota">Southeast Minnesota</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="filterCity">City</label>
+                    <input type="text" id="filterCity" placeholder="e.g. Duluth" />
+                </div>
+
+                <div class="form-row price-row">
+                    <div class="form-group">
+                        <label for="filterMinPrice">Min $ / unit</label>
+                        <input type="number" id="filterMinPrice" placeholder="0" step="0.01" min="0" />
+                    </div>
+                    <div class="form-group">
+                        <label for="filterMaxPrice">Max $ / unit</label>
+                        <input type="number" id="filterMaxPrice" placeholder="Any" step="0.01" min="0" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="filterTransport" />
+                        <span>Farmer can provide transport</span>
+                    </label>
+                </div>
+
+                <div class="form-group" id="donationFilterGroup">
+                    <label class="checkbox-label donation-check">
+                        <input type="checkbox" id="filterDonation" />
+                        <span>Show donation-eligible only</span>
+                    </label>
+                </div>
+
+                <button class="btn btn-primary btn-block" id="applyFiltersBtn">Search</button>
+                <button class="btn btn-ghost btn-block" id="clearFiltersBtn">Clear Filters</button>
+            </aside>
+
+            <!-- ── RESULTS AREA ───────────────────────────────────────────────── -->
+            <main class="browse-results">
+                <div class="results-header">
+                    <span id="resultCount" class="result-count"></span>
+                </div>
+
+                <div class="loading-state" id="browseLoading">
+                    <div class="spinner"></div>
+                    <p>Searching farmers…</p>
+                </div>
+
+                <div class="empty-state hidden" id="browseEmpty">
+                    <span>🔍</span>
+                    <p>No farmers match your filters. Try broadening your search.</p>
+                </div>
+
+                <div id="farmerGrid" class="farmer-grid"></div>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         VIEW: DONATION OPPORTUNITIES
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="viewDonate" class="consumer-view-panel hidden">
+
+        <!-- Donate filters -->
+        <div class="donate-filters card">
+            <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                <div class="form-group" style="flex:1; min-width:180px;">
+                    <label for="donateFilterCrop">Crop</label>
+                    <input type="text" id="donateFilterCrop" placeholder="e.g. Tomatoes" />
+                </div>
+                <div class="form-group" style="flex:1; min-width:180px;">
+                    <label for="donateFilterMaxAmt">Max Total Amount ($)</label>
+                    <input type="number" id="donateFilterMaxAmt" placeholder="Any" step="0.01" min="0" />
+                </div>
+                <div class="form-group" style="min-width:180px;">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="donateFilterGroupOnly" />
+                        <span>Group donations only</span>
+                    </label>
+                </div>
+                <button class="btn btn-primary" id="applyDonateFilters">Search</button>
+                <button class="btn btn-ghost" id="clearDonateFilters">Clear</button>
+            </div>
+        </div>
+
+        <div class="loading-state hidden" id="donationsLoading">
+            <div class="spinner"></div>
+            <p>Loading donation opportunities…</p>
+        </div>
+        <div class="empty-state hidden" id="donationsEmpty">
+            <span>🎁</span>
+            <p>No donation opportunities available right now. Check back soon!</p>
+        </div>
+        <div id="donationOppsGrid" class="donation-grid"></div>
+
+    </div>
+
+</div>
+
+<!-- ── DONATE NOW MODAL ───────────────────────────────────────────────────── -->
+<div id="donateModal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <button class="modal-close" id="closeDonateModal">✕</button>
+        <h3 class="modal-title">Donate Now</h3>
+        <div id="donateModalContent">
+            <div class="donate-info">
+                <p><strong>Crop:</strong> <span id="dCropName"></span></p>
+                <p><strong>Organization:</strong> <span id="dOrgName"></span></p>
+                <p><strong>Total Required:</strong> $<span id="dTotalAmt"></span></p>
+                <p><strong>Already Donated:</strong> $<span id="dAmtDonated"></span></p>
+                <p><strong>Remaining:</strong> $<span id="dAmtRemaining"></span></p>
+            </div>
+            <div class="form-group">
+                <label for="donateSelectFarmer">Choose Farmer (receiving payment)</label>
+                <select id="donateSelectFarmer"></select>
+            </div>
+            <div class="form-group">
+                <label for="donateAmount">Your Donation Amount ($)</label>
+                <input type="number" id="donateAmount" placeholder="e.g. 20.00" step="0.01" min="0.01" />
+                <p class="muted" style="margin-top:.35rem;">Every $20 = 100 pts earned 🎯</p>
+            </div>
+            <p class="error-msg hidden" id="donateError"></p>
+            <div class="form-actions">
+                <button class="btn btn-primary btn-block" id="confirmDonateBtn">Confirm Donation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── JOIN GROUP DONATION MODAL ─────────────────────────────────────────── -->
+<div id="groupDonateModal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <button class="modal-close" id="closeGroupDonateModal">✕</button>
+        <h3 class="modal-title">Join Group Donation</h3>
+        <div class="group-donate-info">
+            <p><strong>Crop:</strong> <span id="gdCropName"></span></p>
+            <p><strong>Organization:</strong> <span id="gdOrgName"></span></p>
+        </div>
+        <div class="group-progress">
+            <div class="group-progress-bar">
+                <div class="group-progress-fill" id="gdProgressFill"></div>
+            </div>
+            <div class="group-progress-labels">
+                <span>$<span id="gdPledged">0</span> pledged</span>
+                <span>$<span id="gdTotal">0</span> goal</span>
+            </div>
+        </div>
+        <div class="group-donors-row">
+            <span class="donor-stat"><strong id="gdDonorCount">0</strong> donor(s) joined</span>
+            <span class="donor-stat"><strong id="gdDonorNeeded">0</strong> needed</span>
+            <span class="donor-stat"><strong id="gdDonorRemaining">0</strong> remaining</span>
+        </div>
+        <div class="form-group">
+            <label for="groupDonateAmount">Your Pledge Amount ($)</label>
+            <input type="number" id="groupDonateAmount" placeholder="e.g. 20.00" step="0.01" min="0.01" />
+            <p class="muted" style="margin-top:.35rem;">Every $20 = 100 pts earned 🎯</p>
+        </div>
+        <p class="error-msg hidden" id="groupDonateError"></p>
+        <div class="form-actions">
+            <button class="btn btn-primary btn-block" id="confirmGroupDonateBtn">Join &amp; Pledge</button>
+        </div>
+    </div>
+</div>

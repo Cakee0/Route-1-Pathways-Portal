@@ -1,0 +1,146 @@
+<!-- components/points_rewards.html — Points & Rewards page (consumers only) -->
+
+<div class="dashboard points-page">
+
+    <div class="page-header">
+        <div>
+            <h2>My Points &amp; Rewards</h2>
+            <p class="sub-text">Every $20 donated earns 100 points. Keep donating to unlock rewards!</p>
+        </div>
+    </div>
+
+    <div class="points-layout">
+
+        <!-- ── LEFT: VERTICAL PROGRESS BAR ─────────────────────────────────── -->
+        <div class="points-progress-col">
+            <div class="card points-bar-card">
+                <h3 class="card-title">Progress</h3>
+                <p class="muted" id="pointsTotalLabel">Loading…</p>
+
+                <div class="points-bar-container">
+
+                    <!-- Tier 3 label (top) -->
+                    <div class="tier-label tier-top">
+                        <div class="tier-circle" id="tier3Circle">
+                            <span>🏆</span>
+                        </div>
+                        <div class="tier-info">
+                            <strong>Tier 3</strong>
+                            <span class="muted">3,000 pts</span>
+                        </div>
+                    </div>
+
+                    <!-- Vertical bar wrapper -->
+                    <div class="vbar-wrapper">
+                        <div class="vbar-track">
+                            <div class="vbar-fill" id="vbarFill"></div>
+                        </div>
+                        <!-- Tier markers on bar -->
+                        <div class="tier-marker" id="tierMarker3" style="bottom: 100%"></div>
+                        <div class="tier-marker" id="tierMarker2" style="bottom: 50%"></div>
+                        <div class="tier-marker" id="tierMarker1" style="bottom: 16.67%"></div>
+                    </div>
+
+                    <!-- Tier 2 label (middle) -->
+                    <div class="tier-label tier-mid">
+                        <div class="tier-circle" id="tier2Circle">
+                            <span>⭐</span>
+                        </div>
+                        <div class="tier-info">
+                            <strong>Tier 2</strong>
+                            <span class="muted">1,500 pts</span>
+                        </div>
+                    </div>
+
+                    <!-- Tier 1 label (lower) -->
+                    <div class="tier-label tier-low">
+                        <div class="tier-circle" id="tier1Circle">
+                            <span>🌱</span>
+                        </div>
+                        <div class="tier-info">
+                            <strong>Tier 1</strong>
+                            <span class="muted">500 pts</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Next milestone -->
+                <div class="next-tier-hint" id="nextTierHint">
+                    <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: SUMMARY + HISTORY ─────────────────────────────────────── -->
+        <div class="points-detail-col">
+
+            <!-- Summary cards -->
+            <div class="points-summary-row">
+                <div class="card stat-card">
+                    <div class="stat-value" id="totalPointsDisplay">—</div>
+                    <div class="stat-label">Total Points</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="currentTierDisplay">—</div>
+                    <div class="stat-label">Current Tier</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="ptsToNextDisplay">—</div>
+                    <div class="stat-label">Points to Next Tier</div>
+                </div>
+            </div>
+
+            <!-- Reward tiers explanation -->
+            <div class="card tiers-card">
+                <h3 class="card-title">Reward Tiers</h3>
+                <p class="card-sub">Rewards are coming soon — keep donating to secure your progress!</p>
+                <div class="tiers-list">
+                    <div class="tier-row" id="tierRow1">
+                        <div class="tier-icon">🌱</div>
+                        <div class="tier-desc">
+                            <strong>Tier 1 — 500 Points</strong>
+                            <p class="muted">First steps toward making a difference</p>
+                        </div>
+                        <div class="tier-status" id="tier1Status"></div>
+                    </div>
+                    <div class="tier-row" id="tierRow2">
+                        <div class="tier-icon">⭐</div>
+                        <div class="tier-desc">
+                            <strong>Tier 2 — 1,500 Points</strong>
+                            <p class="muted">A dedicated food rescue supporter</p>
+                        </div>
+                        <div class="tier-status" id="tier2Status"></div>
+                    </div>
+                    <div class="tier-row" id="tierRow3">
+                        <div class="tier-icon">🏆</div>
+                        <div class="tier-desc">
+                            <strong>Tier 3 — 3,000 Points</strong>
+                            <p class="muted">Route 1 Champion — top of the community</p>
+                        </div>
+                        <div class="tier-status" id="tier3Status"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction history -->
+            <div class="card">
+                <div class="card-header-row">
+                    <h3 class="card-title">Points History</h3>
+                    <span class="muted" id="historyCount"></span>
+                </div>
+
+                <div class="loading-state" id="pointsLoading">
+                    <div class="spinner"></div>
+                    <p>Loading history…</p>
+                </div>
+                <div class="empty-state hidden" id="pointsEmpty">
+                    <span>🌾</span>
+                    <p>No donations yet. Start donating to earn points!</p>
+                </div>
+                <div id="pointsHistory" class="hidden"></div>
+            </div>
+
+        </div>
+    </div>
+</div>

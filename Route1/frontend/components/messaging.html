@@ -1,0 +1,73 @@
+<!-- components/messaging.html — Direct messaging interface -->
+
+<div class="dashboard messaging-dashboard">
+
+    <div class="page-header">
+        <div>
+            <h2>Messages</h2>
+            <p class="sub-text">Direct conversations with farmers and buyers</p>
+        </div>
+    </div>
+
+    <div class="messaging-layout">
+
+        <!-- ── CONVERSATIONS SIDEBAR ──────────────────────────────────────── -->
+        <aside class="conversations-sidebar card">
+            <div class="sidebar-header">
+                <h3>Conversations</h3>
+                <button class="btn btn-sm btn-ghost" id="refreshConvsBtn" title="Refresh">↻</button>
+            </div>
+
+            <div class="loading-state" id="convsLoading">
+                <div class="spinner"></div>
+            </div>
+
+            <div class="empty-state hidden" id="convsEmpty">
+                <span>💬</span>
+                <p>No conversations yet.</p>
+                <p class="sub-text">Browse farmers and tap "Message Farmer" to start one.</p>
+            </div>
+
+            <ul id="conversationsList" class="conversations-list"></ul>
+        </aside>
+
+        <!-- ── MESSAGE THREAD ─────────────────────────────────────────────── -->
+        <main class="message-area">
+
+            <!-- Placeholder when no conversation is selected -->
+            <div class="no-conv-selected" id="noConvSelected">
+                <span>📨</span>
+                <p>Select a conversation to view messages</p>
+            </div>
+
+            <!-- Active thread -->
+            <div class="message-thread hidden" id="messageThread">
+
+                <!-- Thread header -->
+                <div class="thread-header">
+                    <div>
+                        <strong id="threadPartnerName"></strong>
+                        <span class="sub-text" id="threadPartnerRole"></span>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="messages-scroll" id="messagesScroll">
+                    <div class="loading-state" id="msgsLoading">
+                        <div class="spinner"></div>
+                    </div>
+                    <div id="messagesList" class="messages-list"></div>
+                </div>
+
+                <!-- Input area -->
+                <div class="message-input-area">
+                    <textarea id="messageInput" placeholder="Type your message… (Shift+Enter for new line)"
+                        rows="2"></textarea>
+                    <button class="btn btn-primary" id="sendMessageBtn">Send</button>
+                </div>
+
+            </div>
+        </main>
+
+    </div>
+</div>

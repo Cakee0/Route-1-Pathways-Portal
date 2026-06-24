@@ -1,0 +1,131 @@
+<!-- components/login.html — Login & Registration panel (injected by app.js) -->
+
+<div class="auth-page">
+    <div class="auth-container">
+
+        <!-- Brand -->
+        <div class="auth-brand">
+            <span class="brand-icon">🌾</span>
+            <h1>Route <strong>1</strong></h1>
+            <p class="auth-brand-sub">Pathways</p>
+            <p>Minnesota's food rescue marketplace</p>
+        </div>
+
+        <!-- Tab toggle -->
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="showLoginTab">Sign In</button>
+            <button class="auth-tab" id="showRegisterTab">Create Account</button>
+        </div>
+
+        <!-- ── LOGIN PANEL ──────────────────────────────────────────────────── -->
+        <div id="loginPanel" class="auth-panel card">
+            <h2>Welcome back</h2>
+            <p class="sub-text">Log in to access Route 1 Pathways.</p>
+
+            <form id="loginFormEl" novalidate>
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="you@example.com" required />
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required />
+                </div>
+                <p class="error-msg hidden" id="loginError"></p>
+                <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+            </form>
+        </div>
+
+        <!-- ── REGISTER PANEL ───────────────────────────────────────────────── -->
+        <div id="registerPanel" class="auth-panel card hidden">
+            <h2>Join Route 1 Pathways</h2>
+            <p class="sub-text">Connect Minnesota farmers with communities.</p>
+
+            <form id="registerFormEl" novalidate>
+
+                <!-- Step 1: Who are you? -->
+                <div class="form-group">
+                    <label>I am a…</label>
+                    <div class="type-selector">
+                        <label class="type-card" for="typeFarmer">
+                            <input type="radio" id="typeFarmer" name="userType" value="farmer" />
+                            <span class="type-icon">🌱</span>
+                            <span class="type-label">Farmer</span>
+                        </label>
+                        <label class="type-card" for="typeOrg">
+                            <input type="radio" id="typeOrg" name="userType" value="organization" />
+                            <span class="type-icon">🏪</span>
+                            <span class="type-label">Organization</span>
+                        </label>
+                        <label class="type-card" for="typeConsumer">
+                            <input type="radio" id="typeConsumer" name="userType" value="consumer" />
+                            <span class="type-icon">🧑‍🍳</span>
+                            <span class="type-label">Consumer</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Organization sub-type (shown only for orgs) -->
+                <div class="form-group hidden" id="orgSubtypeGroup">
+                    <label for="orgSubtype">Organization Type</label>
+                    <select id="orgSubtype">
+                        <option value="">— Select type —</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="grocery_store">Grocery Store</option>
+                        <option value="food_shelf">Food Shelf</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="regFullName">Full Name</label>
+                    <input type="text" id="regFullName" placeholder="Jane Doe" required />
+                </div>
+
+                <div class="form-group hidden" id="orgNameGroup">
+                    <label for="regOrgName" id="orgNameLabel">Farm / Organization Name</label>
+                    <input type="text" id="regOrgName" placeholder="Green Acres Farm" />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="regCity">Minnesota City</label>
+                        <input type="text" id="regCity" placeholder="Minneapolis" />
+                    </div>
+                    <div class="form-group">
+                        <label for="regRegion">MN Region</label>
+                        <select id="regRegion">
+                            <option value="">— Select region —</option>
+                            <option value="Twin Cities Metro">Twin Cities Metro</option>
+                            <option value="Central Minnesota">Central Minnesota</option>
+                            <option value="Southern Minnesota">Southern Minnesota</option>
+                            <option value="Northern Minnesota">Northern Minnesota</option>
+                            <option value="Northwest Minnesota">Northwest Minnesota</option>
+                            <option value="Southwest Minnesota">Southwest Minnesota</option>
+                            <option value="Southeast Minnesota">Southeast Minnesota</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="regEmail">Email</label>
+                        <input type="email" id="regEmail" placeholder="you@example.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="regPhone">Phone (optional)</label>
+                        <input type="tel" id="regPhone" placeholder="(651) 555-0100" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input type="password" id="regPassword" placeholder="Min. 8 characters" required />
+                </div>
+
+                <p class="error-msg hidden" id="registerError"></p>
+                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+            </form>
+        </div>
+
+    </div>
+</div>
