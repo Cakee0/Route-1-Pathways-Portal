@@ -22,5 +22,9 @@ Thumbs.db
 # ── Local tooling ───────────────────────────────────────────────────────────
 .claude/
 
+# ── Local, never-commit notes (may contain secrets) ─────────────────────────
+*.local.md
+*.secrets.md
+
 # ── Logs ────────────────────────────────────────────────────────────────────
 *.log
