@@ -14,7 +14,7 @@
 // host (e.g. GitHub Pages) we hit the deployed AWS backend below.
 // ── Fill in your AWS backend's HTTPS URL once deployed. It MUST be https:// —
 //    GitHub Pages is served over HTTPS and browsers block http:// (mixed content).
-const PROD_API_BASE = "https://YOUR-AWS-BACKEND-URL";   // e.g. https://api.route1app.com
+const PROD_API_BASE = "https://api.route1pathways.app";   // AWS EC2 backend (Caddy HTTPS)
 const API_BASE =
     (location.hostname === "localhost" || location.hostname === "127.0.0.1")
         ? "http://localhost:8000"
