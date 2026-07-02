@@ -207,10 +207,18 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
 
     # Auto-link: an existing password account with the same verified email
     # gets its Google identity attached the first time they use Google.
+    #
+    # SECURITY: the password is cleared on link. Registration doesn't verify
+    # email ownership, so someone could pre-register this email with a password
+    # they know; Google's verified credential proves the person signing in NOW
+    # owns the email, so any pre-existing password must not retain access.
+    # The account becomes Google-only (login endpoint explains this if a
+    # password login is attempted).
     if user is None and email:
         user = db.query(User).filter(User.email == email).first()
         if user is not None and user.google_id is None:
             user.google_id = google_id
+            user.hashed_password = None
             db.commit()
             db.refresh(user)
 
@@ -262,7 +270,10 @@ def google_complete(payload: GoogleRegisterRequest, db: Session = Depends(get_db
     )
     if existing is not None:
         if existing.google_id is None:
+            # Same takeover guard as /auth/google: linking by email clears any
+            # pre-existing password (see comment there for the rationale).
             existing.google_id = google_id
+            existing.hashed_password = None
             db.commit()
             db.refresh(existing)
         return TokenResponse(

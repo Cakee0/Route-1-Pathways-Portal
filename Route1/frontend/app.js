@@ -438,10 +438,16 @@ const App = {
                 errEl.classList.remove("hidden");
                 return;
             }
+            const regPassword = document.getElementById("regPassword").value;
+            if (regPassword.length < 8) {
+                errEl.textContent = "Password must be at least 8 characters.";
+                errEl.classList.remove("hidden");
+                return;
+            }
 
             const payload = {
                 email: document.getElementById("regEmail").value.trim(),
-                password: document.getElementById("regPassword").value,
+                password: regPassword,
                 user_type: userType,
                 org_subtype: orgSubtype,
                 full_name: document.getElementById("regFullName").value.trim() || null,

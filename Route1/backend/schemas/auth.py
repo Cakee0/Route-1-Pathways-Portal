@@ -5,7 +5,7 @@ schemas/auth.py — Pydantic request/response schemas for authentication endpoin
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from models import OrgSubtypeEnum, UserTypeEnum
 
@@ -14,7 +14,11 @@ from models import OrgSubtypeEnum, UserTypeEnum
 
 class UserRegisterRequest(BaseModel):
     email:    EmailStr
-    password: str
+    # 72-char cap matches bcrypt's 72-byte input limit (see utils/security.py).
+    password: str = Field(
+        ..., min_length=8, max_length=72,
+        description="8–72 characters",
+    )
     user_type: UserTypeEnum
 
     # Organizations must specify a sub-type
