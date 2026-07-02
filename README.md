@@ -18,6 +18,31 @@ Organizations have a sub-type: `restaurant`, `grocery_store`, or `food_shelf`. O
 
 ---
 
+## Live Deployment
+
+The app runs as a **split deployment**: a static frontend on GitHub Pages and a live API on AWS.
+
+| Piece | Where | URL |
+|---|---|---|
+| **Frontend** (static SPA) | GitHub Pages (deployed via GitHub Actions from `Route1/frontend`) | https://route1pathways.app |
+| **Backend** (FastAPI) | AWS EC2 (Ubuntu, `us-east-2`) behind Caddy for automatic HTTPS | https://api.route1pathways.app |
+| **Database** | AWS RDS MySQL 8.0 (`us-east-2`, private — reachable only from EC2) | — |
+
+```
+Browser ──▶ https://route1pathways.app        (GitHub Pages: HTML/CSS/JS)
+        └─▶ https://api.route1pathways.app     (EC2: Caddy 443 ▶ uvicorn 127.0.0.1:8000)
+                          └─▶ AWS RDS MySQL (private, same VPC)
+```
+
+**How the two halves connect**
+- The frontend auto-selects its API base in [`app.js`](Route1/frontend/app.js): `http://localhost:8000` when run locally, otherwise `https://api.route1pathways.app` (the `PROD_API_BASE` constant).
+- The backend restricts browser access via CORS. Allowed origins are read from the `ALLOWED_ORIGINS` env var (`https://route1pathways.app,https://www.route1pathways.app`); any `localhost` port is always allowed for local dev.
+- The FastAPI app runs as a `systemd` service (`route1.service`) so it restarts on crash/reboot. Update flow on the server: `git pull` → `sudo systemctl restart route1`.
+
+Full step-by-step (account setup → RDS → EC2 → HTTPS → DNS) is in [`Route1/DEPLOY.md`](Route1/DEPLOY.md).
+
+---
+
 ## Features
 
 ### Core marketplace
@@ -148,7 +173,7 @@ pip install -r requirements.txt
 
 ### 3. Configure environment
 
-Create a `.env` file in `backend/` with at least:
+Create a `.env` file in `backend/` (see [`.env.example`](Route1/backend/.env.example)):
 
 ```
 DB_HOST=<your-rds-endpoint>
@@ -156,10 +181,15 @@ DB_PORT=3306
 DB_NAME=mysqlRouteOne
 DB_USER=<username>
 DB_PASSWORD=<password>
-SECRET_KEY=<random-32-byte-hex>
+SECRET_KEY=<random-32-byte-hex>          # python -c "import secrets; print(secrets.token_hex(32))"
+GOOGLE_CLIENT_ID=<oauth-web-client-id>   # for "Sign in with Google"; must match GOOGLE_CLIENT_ID in app.js
+ALLOWED_ORIGINS=https://route1pathways.app,https://www.route1pathways.app   # prod browser origins for CORS
 ```
 
-Optionally set `RDS_SSL_CA=/path/to/global-bundle.pem` to enable full SSL certificate verification against the RDS CA bundle.
+Notes:
+- `ALLOWED_ORIGINS` is a comma-separated list of scheme+host origins (no trailing slash). Any `localhost`/`127.0.0.1` port is allowed automatically, so it can be left blank for pure local dev.
+- Optionally set `RDS_SSL_CA=/path/to/global-bundle.pem` to enable full SSL certificate verification against the RDS CA bundle.
+- The `mysqlRouteOne` **database** must exist on the server before first run (the app creates the *tables*, not the database): `CREATE DATABASE IF NOT EXISTS mysqlRouteOne CHARACTER SET utf8mb4;`
 
 ### 4. Run the server
 
@@ -183,7 +213,9 @@ python -m http.server 3000
 # Visit http://localhost:3000
 ```
 
-The `API_BASE` constant at the top of `frontend/app.js` defaults to `http://localhost:8000`. Change it to your deployed API URL for production.
+`app.js` auto-selects the API base: when served from `localhost`/`127.0.0.1` it calls `http://localhost:8000`; from any other host (e.g. GitHub Pages) it calls the `PROD_API_BASE` constant near the top of the file (currently `https://api.route1pathways.app`). No manual toggling between local and prod is needed — just update `PROD_API_BASE` if the backend URL changes.
+
+In production the frontend is deployed automatically to GitHub Pages by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to `main` — it publishes the `Route1/frontend` folder. (Repo → Settings → Pages → Source must be set to **GitHub Actions**.)
 
 ### Navigation (role-based)
 | Role | Nav links shown |
