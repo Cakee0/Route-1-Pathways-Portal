@@ -13,7 +13,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Configuration ────────────────────────────────────────────────────────────
-SECRET_KEY        = os.getenv("SECRET_KEY", "CHANGE_THIS_SECRET_IN_PRODUCTION_32chars!")
+# No fallback: a known default key would let anyone forge login tokens, and the
+# app would run fine while silently insecure. Refuse to start instead.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise SystemExit(
+        "SECRET_KEY is not set — refusing to start with a forgeable signing key.\n"
+        "Add it to backend/.env; generate one with:\n"
+        '  python3 -c "import secrets; print(secrets.token_hex(32))"'
+    )
+
 ALGORITHM         = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
