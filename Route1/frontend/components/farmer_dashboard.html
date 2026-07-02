@@ -23,7 +23,7 @@
                 </div>
                 <div class="form-group">
                     <label for="cropQty">Quantity *</label>
-                    <input type="text" id="cropQty" placeholder="e.g. 200" required />
+                    <input type="number" id="cropQty" placeholder="e.g. 200" min="0.01" step="any" required />
                 </div>
                 <div class="form-group">
                     <label for="cropUnit">Unit</label>
@@ -120,7 +120,7 @@
                 </div>
                 <div class="form-group">
                     <label for="editCropQty">Quantity</label>
-                    <input type="text" id="editCropQty" required />
+                    <input type="number" id="editCropQty" min="0.01" step="any" required />
                 </div>
                 <div class="form-group">
                     <label for="editCropUnit">Unit</label>

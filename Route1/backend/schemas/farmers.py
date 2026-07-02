@@ -6,13 +6,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
+
+from schemas.units import QuantityUnit
 
 
 class CropListingCreate(BaseModel):
-    crop_name:             str
-    quantity_available:    str             # e.g. "200"
-    quantity_unit:         str   = "lbs"  # lbs, kg, boxes, bushels, etc.
+    crop_name:             str = Field(..., min_length=1, max_length=255)
+    # Numeric so impact totals can be aggregated (MPCA reporting).
+    quantity_available:    Decimal = Field(..., gt=0)
+    quantity_unit:         QuantityUnit = "lbs"
     price_per_unit:        Optional[Decimal] = None  # None = "price on request"
     description:           Optional[str]     = None
     can_provide_transport: bool = False
@@ -24,21 +27,14 @@ class CropListingCreate(BaseModel):
     def normalise_crop_name(cls, v: str) -> str:
         return v.strip().title()
 
-    @field_validator("quantity_available")
-    @classmethod
-    def quantity_not_empty(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("quantity_available cannot be empty.")
-        return v.strip()
-
     model_config = {"from_attributes": True}
 
 
 class CropListingUpdate(BaseModel):
     """All fields optional — PATCH semantics via model_dump(exclude_unset=True)."""
-    crop_name:             Optional[str]     = None
-    quantity_available:    Optional[str]     = None
-    quantity_unit:         Optional[str]     = None
+    crop_name:             Optional[str]     = Field(None, min_length=1, max_length=255)
+    quantity_available:    Optional[Decimal] = Field(None, gt=0)
+    quantity_unit:         Optional[QuantityUnit] = None
     price_per_unit:        Optional[Decimal] = None
     description:           Optional[str]     = None
     can_provide_transport: Optional[bool]    = None
@@ -53,7 +49,8 @@ class CropListingResponse(BaseModel):
     id:                    int
     farmer_id:             int
     crop_name:             str
-    quantity_available:    str
+    # float (not Decimal) so JSON carries a number: 200, not "200.00".
+    quantity_available:    float
     quantity_unit:         str
     price_per_unit:        Optional[Decimal]
     description:           Optional[str]

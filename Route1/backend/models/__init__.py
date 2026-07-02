@@ -10,6 +10,7 @@ from .user import User, UserTypeEnum, OrgSubtypeEnum
 from .crop_inventory import FarmerCropInventory
 from .messaging import Message, make_conversation_id
 from .wishlist import WishlistItem, WishlistFarmerLink, WishlistStatusEnum
+from .fulfillment import Fulfillment
 from .donation import (
     Donation, DonationStatusEnum,
     GroupDonation, GroupDonationStatusEnum,
@@ -32,6 +33,7 @@ __all__ = [
     "WishlistItem",
     "WishlistFarmerLink",
     "WishlistStatusEnum",
+    "Fulfillment",
     # Donations
     "Donation",
     "DonationStatusEnum",

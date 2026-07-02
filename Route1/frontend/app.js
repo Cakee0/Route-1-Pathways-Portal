@@ -626,7 +626,7 @@ const App = {
             const price = document.getElementById("cropPrice").value;
             const payload = {
                 crop_name: document.getElementById("cropName").value.trim(),
-                quantity_available: document.getElementById("cropQty").value.trim(),
+                quantity_available: parseFloat(document.getElementById("cropQty").value),
                 quantity_unit: document.getElementById("cropUnit").value,
                 price_per_unit: price ? parseFloat(price) : null,
                 description: document.getElementById("cropDesc").value.trim() || null,
@@ -661,7 +661,7 @@ const App = {
             const price = document.getElementById("editCropPrice").value;
             const payload = {
                 crop_name: document.getElementById("editCropName").value.trim(),
-                quantity_available: document.getElementById("editCropQty").value.trim(),
+                quantity_available: parseFloat(document.getElementById("editCropQty").value),
                 quantity_unit: document.getElementById("editCropUnit").value,
                 price_per_unit: price ? parseFloat(price) : null,
                 description: document.getElementById("editCropDesc").value.trim() || null,
@@ -1674,7 +1674,7 @@ const App = {
 
         const payload = {
             crop_name: document.getElementById("wlCropName").value.trim(),
-            quantity_needed: document.getElementById("wlQty").value.trim(),
+            quantity_needed: parseFloat(document.getElementById("wlQty").value),
             quantity_unit: document.getElementById("wlUnit").value,
             total_amount_required: parseFloat(document.getElementById("wlAmount").value),
             notes: document.getElementById("wlNotes").value.trim() || null,
@@ -1717,10 +1717,15 @@ const App = {
             }
 
             grid.innerHTML = items.map(item => this._renderWishlistOrgCard(item)).join("");
+            this._orgWishlistItems = items;   // cache for the fulfill modal
 
             // Cancel button listeners
             grid.querySelectorAll(".cancel-wishlist-btn").forEach(btn => {
                 btn.addEventListener("click", () => this._cancelWishlistItem(parseInt(btn.dataset.id)));
+            });
+            // Mark-fulfilled button listeners
+            grid.querySelectorAll(".fulfill-wishlist-btn").forEach(btn => {
+                btn.addEventListener("click", () => this._openFulfillModal(parseInt(btn.dataset.id)));
             });
         } catch (err) {
             loading?.classList.add("hidden");
@@ -1759,11 +1764,88 @@ const App = {
         </div>
         <p class="muted">$${donated} / $${total} funded (${pct}%)</p>
         <div class="form-actions" style="margin-top:.75rem;">
+          ${["open", "funded"].includes(item.status)
+                ? `<button class="btn btn-primary btn-sm fulfill-wishlist-btn" data-id="${item.id}">✓ Mark Fulfilled</button>`
+                : ""}
           ${item.status === "open"
                 ? `<button class="btn btn-danger btn-sm cancel-wishlist-btn" data-id="${item.id}">Cancel Item</button>`
                 : ""}
         </div>
       </div>`;
+    },
+
+    /* Fulfillment modal — records actual pounds delivered (MPCA impact metric)
+       and is the only way an item transitions to "fulfilled". */
+    _openFulfillModal(itemId) {
+        const item = (this._orgWishlistItems || []).find(i => i.id === itemId);
+        if (!item) return;
+
+        const modal = document.getElementById("wishlistDetailModal");
+        const content = document.getElementById("wishlistDetailContent");
+        if (!modal || !content) return;
+
+        const farmerOptions = (item.farmers || []).map(f =>
+            `<option value="${f.farmer_id}">${this._esc(f.full_name || f.farm_name || "Farmer #" + f.farmer_id)}</option>`
+        ).join("");
+
+        content.innerHTML = `
+      <h3>Mark "${this._esc(item.crop_name)}" Fulfilled</h3>
+      <p class="muted">Record the delivery. Pounds delivered feeds our food-rescue
+        impact reporting, so please estimate as accurately as you can.</p>
+      <form id="fulfillFormEl" novalidate>
+        <div class="form-group">
+          <label for="fulfillFarmer">Delivered by *</label>
+          <select id="fulfillFarmer" required>${farmerOptions}</select>
+        </div>
+        <div class="form-group">
+          <label for="fulfillPounds">Pounds of food delivered *</label>
+          <input type="number" id="fulfillPounds" min="0.01" step="any"
+                 placeholder="e.g. ${item.quantity_unit === "lbs" ? this._esc(item.quantity_needed) : "150"}" required />
+        </div>
+        <div class="form-group">
+          <label for="fulfillNotes">Notes (optional)</label>
+          <input type="text" id="fulfillNotes" maxlength="512" placeholder="e.g. Delivered fresh on Tuesday" />
+        </div>
+        <p class="error-msg hidden" id="fulfillError"></p>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Record Delivery</button>
+        </div>
+      </form>`;
+
+        content.querySelector("#fulfillFormEl").addEventListener("submit", async e => {
+            e.preventDefault();
+            const errEl = content.querySelector("#fulfillError");
+            errEl.classList.add("hidden");
+
+            const pounds = parseFloat(content.querySelector("#fulfillPounds").value);
+            const farmerId = parseInt(content.querySelector("#fulfillFarmer").value);
+            if (!farmerId) {
+                errEl.textContent = "No linked farmer to attribute this delivery to.";
+                errEl.classList.remove("hidden");
+                return;
+            }
+            if (!pounds || pounds <= 0) {
+                errEl.textContent = "Please enter the pounds delivered.";
+                errEl.classList.remove("hidden");
+                return;
+            }
+
+            try {
+                await this.api("POST", `/wishlist/${itemId}/fulfill`, {
+                    farmer_id: farmerId,
+                    pounds_delivered: pounds,
+                    notes: content.querySelector("#fulfillNotes").value.trim() || null,
+                });
+                modal.classList.add("hidden");
+                this.showToast(`Recorded ${pounds} lbs delivered. Thank you! 🌾`, "success");
+                this._loadMyWishlist();
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove("hidden");
+            }
+        });
+
+        modal.classList.remove("hidden");
     },
 
     async _cancelWishlistItem(itemId) {

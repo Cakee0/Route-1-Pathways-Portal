@@ -12,7 +12,8 @@ class CropSummary(BaseModel):
     """Compact crop card embedded within a FarmerListingResponse."""
     id:                    int
     crop_name:             str
-    quantity_available:    str
+    # float so JSON carries a number: 200, not "200.00".
+    quantity_available:    float
     quantity_unit:         str
     price_per_unit:        Optional[Decimal]
     can_provide_transport: bool

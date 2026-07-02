@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS `farmer_crop_inventory` (
     `farmer_id`             INT           NOT NULL,
 
     `crop_name`             VARCHAR(255)  NOT NULL,
-    `quantity_available`    VARCHAR(100)  NOT NULL,          -- e.g. "200"
+    -- Numeric so impact totals can be aggregated (MPCA reporting).
+    `quantity_available`    DECIMAL(10,2) NOT NULL,
     `quantity_unit`         VARCHAR(50)   NOT NULL DEFAULT 'lbs',
     `price_per_unit`        DECIMAL(10,2) NULL,
     `description`           TEXT          NULL,
@@ -174,6 +175,23 @@ ALTER TABLE `users`
 ALTER TABLE `users`
     ADD UNIQUE KEY `uq_users_google_id` (`google_id`);
 
+-- v3 (MPCA impact reporting): quantities become numeric so pounds can be
+-- SUM()ed. Legacy free-text values that aren't parseable are zeroed first so
+-- the MODIFY can't fail; both UPDATEs are no-ops once the columns are DECIMAL.
+UPDATE `farmer_crop_inventory`
+    SET `quantity_available` = 0
+    WHERE `quantity_available` NOT REGEXP '^[0-9]+(\\.[0-9]+)?$';
+
+ALTER TABLE `farmer_crop_inventory`
+    MODIFY COLUMN `quantity_available` DECIMAL(10,2) NOT NULL;
+
+UPDATE `wishlist_items`
+    SET `quantity_needed` = 0
+    WHERE `quantity_needed` NOT REGEXP '^[0-9]+(\\.[0-9]+)?$';
+
+ALTER TABLE `wishlist_items`
+    MODIFY COLUMN `quantity_needed` DECIMAL(10,2) NOT NULL;
+
 -- =============================================================================
 -- Future tables (stubs for reference — not created yet)
 -- =============================================================================
@@ -196,7 +214,8 @@ CREATE TABLE IF NOT EXISTS `wishlist_items` (
 
     -- What is needed
     `crop_name`             VARCHAR(255)  NOT NULL,
-    `quantity_needed`       VARCHAR(100)  NOT NULL,
+    -- Numeric so impact totals can be aggregated (MPCA reporting).
+    `quantity_needed`       DECIMAL(10,2) NOT NULL,
     `quantity_unit`         VARCHAR(50)   NOT NULL DEFAULT 'lbs',
     `total_amount_required` DECIMAL(10,2) NOT NULL,
 
@@ -412,6 +431,51 @@ CREATE TABLE IF NOT EXISTS `notification_preferences` (
 
     CONSTRAINT `fk_np_user`
         FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+)   ENGINE  = InnoDB
+    CHARSET = utf8mb4
+    COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- Table 11 : fulfillments
+--
+-- One row per recorded delivery of a wishlist item — the source of truth for
+-- MPCA grant impact metrics. `pounds_delivered` is entered by the organization
+-- when it marks an item fulfilled, regardless of the listing's display unit.
+--
+--   Pounds rescued in a period:
+--     SELECT SUM(pounds_delivered) FROM fulfillments
+--     WHERE delivered_at BETWEEN :from AND :to;
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `fulfillments` (
+    `id`                 INT           NOT NULL AUTO_INCREMENT,
+    `wishlist_item_id`   INT           NOT NULL,
+    `organization_id`    INT           NOT NULL,   -- org that received + recorded it
+    `farmer_id`          INT           NOT NULL,   -- farmer who delivered
+
+    -- Grant metric: actual pounds of food delivered.
+    `pounds_delivered`   DECIMAL(12,2) NOT NULL,
+
+    -- Optional context in the listing's original unit (e.g. 4 crates).
+    `quantity_delivered` DECIMAL(10,2) NULL,
+    `quantity_unit`      VARCHAR(50)   NULL,
+
+    `notes`              VARCHAR(512)  NULL,
+    `delivered_at`       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `created_at`         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`id`),
+    KEY `ix_ful_wishlist`  (`wishlist_item_id`),
+    KEY `ix_ful_org`       (`organization_id`),
+    KEY `ix_ful_farmer`    (`farmer_id`),
+    KEY `ix_ful_delivered` (`delivered_at`),
+
+    CONSTRAINT `fk_ful_wishlist`
+        FOREIGN KEY (`wishlist_item_id`) REFERENCES `wishlist_items` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_ful_org`
+        FOREIGN KEY (`organization_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_ful_farmer`
+        FOREIGN KEY (`farmer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 )   ENGINE  = InnoDB
     CHARSET = utf8mb4
     COLLATE = utf8mb4_unicode_ci;

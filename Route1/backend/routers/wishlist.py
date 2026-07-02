@@ -13,6 +13,7 @@ PATCH  /wishlist/{item_id}      — org updates its own item
 DELETE /wishlist/{item_id}      — org soft-cancels its item
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -21,10 +22,13 @@ from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import (
     User, UserTypeEnum, WishlistItem, WishlistFarmerLink, WishlistStatusEnum,
-    GroupDonation,
+    GroupDonation, Fulfillment,
 )
 from routers.auth import get_current_user
-from schemas import WishlistItemCreate, WishlistItemUpdate, WishlistItemResponse
+from schemas import (
+    WishlistItemCreate, WishlistItemUpdate, WishlistItemResponse,
+    FulfillmentCreate, FulfillmentResponse,
+)
 from schemas.wishlist import FarmerSummary, GroupDonationSummary
 
 router = APIRouter(prefix="/wishlist", tags=["Wishlist"])
@@ -278,6 +282,56 @@ def update_wishlist_item(
 
     db.commit()
     return _build_response(_load_item(db, item_id))
+
+
+# ── POST /wishlist/{item_id}/fulfill ─────────────────────────────────────────
+
+@router.post(
+    "/{item_id}/fulfill",
+    response_model=FulfillmentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Organization marks a wishlist item fulfilled, recording pounds delivered",
+)
+def fulfill_wishlist_item(
+    item_id: int,
+    payload: FulfillmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FulfillmentResponse:
+    """Records the actual delivery (the MPCA impact metric) and transitions the
+    item to `fulfilled`. This is the only way to mark an item fulfilled, so
+    every fulfilled item has pounds behind it."""
+    _require_org(current_user)
+    item = _load_item(db, item_id)
+
+    if item.organization_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not own this wishlist item.")
+    if item.status == WishlistStatusEnum.cancelled:
+        raise HTTPException(status_code=409, detail="Cancelled items cannot be fulfilled.")
+    if item.status == WishlistStatusEnum.fulfilled:
+        raise HTTPException(status_code=409, detail="This item is already marked fulfilled.")
+
+    if not any(link.farmer_id == payload.farmer_id for link in item.farmer_links):
+        raise HTTPException(
+            status_code=422,
+            detail="The specified farmer is not linked to this wishlist item.",
+        )
+
+    fulfillment = Fulfillment(
+        wishlist_item_id   = item.id,
+        organization_id    = current_user.id,
+        farmer_id          = payload.farmer_id,
+        pounds_delivered   = payload.pounds_delivered,
+        quantity_delivered = payload.quantity_delivered,
+        quantity_unit      = payload.quantity_unit,
+        notes              = payload.notes,
+        delivered_at       = payload.delivered_at or datetime.utcnow(),
+    )
+    db.add(fulfillment)
+    item.status = WishlistStatusEnum.fulfilled
+    db.commit()
+    db.refresh(fulfillment)
+    return fulfillment
 
 
 # ── DELETE /wishlist/{item_id} ────────────────────────────────────────────────

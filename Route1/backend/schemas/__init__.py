@@ -33,6 +33,8 @@ from .wishlist import (
     WishlistItemResponse,
     FarmerSummary,
     GroupDonationSummary,
+    FulfillmentCreate,
+    FulfillmentResponse,
 )
 from .donations import (
     DonateRequest,
@@ -67,6 +69,7 @@ __all__ = [
     # Wishlist
     "WishlistItemCreate", "WishlistItemUpdate", "WishlistItemResponse",
     "FarmerSummary", "GroupDonationSummary",
+    "FulfillmentCreate", "FulfillmentResponse",
     # Donations
     "DonateRequest", "DonationResponse",
     "JoinGroupDonationRequest", "GroupDonationParticipantResponse",

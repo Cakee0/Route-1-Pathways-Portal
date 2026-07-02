@@ -47,7 +47,8 @@ class WishlistItem(Base):
 
     # What is needed
     crop_name             = Column(String(255), nullable=False, index=True)
-    quantity_needed       = Column(String(100), nullable=False)   # e.g. "50"
+    # Numeric so impact totals can be aggregated (MPCA reporting).
+    quantity_needed       = Column(Numeric(10, 2), nullable=False)
     quantity_unit         = Column(String(50),  nullable=False, default="lbs")
     total_amount_required = Column(Numeric(10, 2), nullable=False)  # total $ to fund
 
@@ -86,6 +87,11 @@ class WishlistItem(Base):
         "GroupDonation",
         back_populates="wishlist_item",
         uselist=False,   # one-to-one: a wishlist item has at most one group donation
+        cascade="all, delete-orphan",
+    )
+    fulfillments   = relationship(
+        "Fulfillment",
+        back_populates="wishlist_item",
         cascade="all, delete-orphan",
     )
 

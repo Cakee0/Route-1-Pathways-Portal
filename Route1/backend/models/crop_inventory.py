@@ -33,7 +33,8 @@ class FarmerCropInventory(Base):
 
     # Crop details
     crop_name             = Column(String(255),   nullable=False, index=True)
-    quantity_available    = Column(String(100),   nullable=False)   # e.g. "200"
+    # Numeric so impact totals can be aggregated (MPCA reporting).
+    quantity_available    = Column(Numeric(10, 2), nullable=False)
     quantity_unit         = Column(String(50),    nullable=False, default="lbs")
     price_per_unit        = Column(Numeric(10, 2), nullable=True)   # NULL = price on request
     description           = Column(Text,          nullable=True)
