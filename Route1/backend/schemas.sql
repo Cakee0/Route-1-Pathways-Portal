@@ -177,7 +177,7 @@ ALTER TABLE `users`
 
 -- v3 (MPCA impact reporting): quantities become numeric so pounds can be
 -- SUM()ed. Legacy free-text values that aren't parseable are zeroed first so
--- the MODIFY can't fail; both UPDATEs are no-ops once the columns are DECIMAL.
+-- the MODIFY can't fail. Both UPDATEs are no-ops once the columns are DECIMAL.
 UPDATE `farmer_crop_inventory`
     SET `quantity_available` = 0
     WHERE `quantity_available` NOT REGEXP '^[0-9]+(\\.[0-9]+)?$';
@@ -445,7 +445,7 @@ CREATE TABLE IF NOT EXISTS `notification_preferences` (
 --
 --   Pounds rescued in a period:
 --     SELECT SUM(pounds_delivered) FROM fulfillments
---     WHERE delivered_at BETWEEN :from AND :to;
+--     WHERE delivered_at BETWEEN :from AND :to
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS `fulfillments` (
     `id`                 INT           NOT NULL AUTO_INCREMENT,

@@ -64,9 +64,14 @@ def create_tables() -> None:
     with open(_SCHEMAS_SQL, "r", encoding="utf-8") as fh:
         sql_script = fh.read()
 
-    # Split on ";" and execute each non-empty statement individually.
-    # pymysql does not support multi-statement execution out of the box.
-    statements = [s.strip() for s in sql_script.split(";") if s.strip()]
+    # Strip full-line comments first so a ";" inside a comment can never split
+    # a statement, then split on ";" and execute each non-empty statement
+    # individually (pymysql does not support multi-statement execution).
+    sql_no_comments = "\n".join(
+        line for line in sql_script.splitlines()
+        if not line.lstrip().startswith("--")
+    )
+    statements = [s.strip() for s in sql_no_comments.split(";") if s.strip()]
 
     with engine.connect() as conn:
         for stmt in statements:
