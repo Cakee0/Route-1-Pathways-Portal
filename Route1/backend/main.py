@@ -5,6 +5,7 @@ User types:  farmer | organization (restaurant/grocery_store/food_shelf) | consu
 """
 
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,9 +44,20 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
+# Browser origins allowed to call the API. Set ALLOWED_ORIGINS in the environment
+# as a comma-separated list of scheme+host origins for production, e.g.:
+#   ALLOWED_ORIGINS=https://<user>.github.io,https://route1app.com
+# (CORS matches on origin only — scheme + host + port — so a GitHub Pages repo
+# subpath like /route1 is NOT part of the origin and must be omitted.)
+# Any localhost / 127.0.0.1 port is always allowed for local development.
+allowed_origins = [
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # Restrict to your domain in production
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

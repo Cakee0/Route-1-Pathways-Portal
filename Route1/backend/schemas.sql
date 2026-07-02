@@ -23,7 +23,10 @@
 CREATE TABLE IF NOT EXISTS `users` (
     `id`                INT          NOT NULL AUTO_INCREMENT,
     `email`             VARCHAR(255) NOT NULL,
-    `hashed_password`   VARCHAR(255) NOT NULL,
+    -- NULL for "Sign in with Google" accounts (no password set).
+    `hashed_password`   VARCHAR(255) NULL,
+    -- Google account subject id (set when a user links / signs in with Google).
+    `google_id`         VARCHAR(255) NULL,
 
     -- Role fields
     `user_type`         ENUM('farmer', 'organization', 'consumer') NOT NULL,
@@ -40,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uq_users_email`      (`email`),
+    UNIQUE KEY `uq_users_google_id`  (`google_id`),
     KEY       `ix_users_email`       (`email`),
     KEY       `ix_users_user_type`   (`user_type`),
     KEY       `ix_users_location`    (`location_region`, `location_city`)
@@ -156,6 +160,19 @@ ALTER TABLE `users`
 ALTER TABLE `users`
     ADD COLUMN `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     AFTER `is_active`;
+
+-- Google sign-in: allow password-less accounts and store the Google subject id.
+-- MODIFY is naturally idempotent. The ADD COLUMN / ADD UNIQUE KEY raise 1060 /
+-- 1061 on re-run, which database.py ignores.
+ALTER TABLE `users`
+    MODIFY COLUMN `hashed_password` VARCHAR(255) NULL;
+
+ALTER TABLE `users`
+    ADD COLUMN `google_id` VARCHAR(255) NULL
+    AFTER `hashed_password`;
+
+ALTER TABLE `users`
+    ADD UNIQUE KEY `uq_users_google_id` (`google_id`);
 
 -- =============================================================================
 -- Future tables (stubs for reference — not created yet)

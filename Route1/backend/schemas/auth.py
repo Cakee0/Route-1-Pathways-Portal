@@ -48,6 +48,52 @@ class UserLoginRequest(BaseModel):
     password: str
 
 
+# ── Google sign-in ────────────────────────────────────────────────────────────
+
+class GoogleAuthRequest(BaseModel):
+    """Google ID token (JWT) returned by Google Identity Services on the client."""
+    credential: str
+
+
+class GoogleRegisterRequest(BaseModel):
+    """Finish a Google sign-up by choosing an account type.
+
+    The same Google `credential` is re-verified server-side, so the role is the
+    only thing the client contributes here.
+    """
+    credential:  str
+    user_type:   UserTypeEnum
+    org_subtype: Optional[OrgSubtypeEnum] = None
+
+    @model_validator(mode="after")
+    def org_subtype_required_for_organization(self) -> "GoogleRegisterRequest":
+        if self.user_type == UserTypeEnum.organization and self.org_subtype is None:
+            raise ValueError(
+                "org_subtype is required for organization accounts. "
+                "Choose: restaurant, grocery_store, or food_shelf."
+            )
+        return self
+
+
+class GoogleAuthResponse(BaseModel):
+    """Result of POST /auth/google.
+
+    - needs_registration=True  → brand-new Google user; the client must collect a
+      role and call POST /auth/google/complete. `access_token` is null.
+    - needs_registration=False → known (or auto-linked) user; a normal token is
+      returned, same shape as TokenResponse.
+    """
+    needs_registration: bool
+    email:      Optional[str] = None
+    full_name:  Optional[str] = None
+
+    access_token: Optional[str] = None
+    token_type:   str = "bearer"
+    user_type:    Optional[UserTypeEnum] = None
+    org_subtype:  Optional[OrgSubtypeEnum] = None
+    user_id:      Optional[int] = None
+
+
 # ── Token response ────────────────────────────────────────────────────────────
 
 class TokenResponse(BaseModel):

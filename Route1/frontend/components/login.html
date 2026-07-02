@@ -1,6 +1,14 @@
 <!-- components/login.html — Login & Registration panel (injected by app.js) -->
 
 <div class="auth-page">
+
+    <!-- drifting clouds, echoing the landing sky -->
+    <div class="auth-sky" aria-hidden="true">
+        <span class="lp-cloud c1"></span>
+        <span class="lp-cloud c3"></span>
+        <span class="lp-cloud c4"></span>
+    </div>
+
     <div class="auth-container">
 
         <!-- Brand -->
@@ -8,7 +16,7 @@
             <span class="brand-icon">🌾</span>
             <h1>Route <strong>1</strong></h1>
             <p class="auth-brand-sub">Pathways</p>
-            <p>Minnesota's food rescue marketplace</p>
+            <p>Routing Minnesota's surplus harvest to the communities that need it.</p>
         </div>
 
         <!-- Tab toggle -->
@@ -34,6 +42,9 @@
                 <p class="error-msg hidden" id="loginError"></p>
                 <button type="submit" class="btn btn-primary btn-block">Sign In</button>
             </form>
+
+            <div class="auth-divider"><span>or</span></div>
+            <div class="google-signin" id="googleLoginBtn"></div>
         </div>
 
         <!-- ── REGISTER PANEL ───────────────────────────────────────────────── -->
@@ -51,16 +62,19 @@
                             <input type="radio" id="typeFarmer" name="userType" value="farmer" />
                             <span class="type-icon">🌱</span>
                             <span class="type-label">Farmer</span>
+                            <span class="type-sub">List your crops</span>
                         </label>
                         <label class="type-card" for="typeOrg">
                             <input type="radio" id="typeOrg" name="userType" value="organization" />
                             <span class="type-icon">🏪</span>
                             <span class="type-label">Organization</span>
+                            <span class="type-sub">Request &amp; receive</span>
                         </label>
                         <label class="type-card" for="typeConsumer">
                             <input type="radio" id="typeConsumer" name="userType" value="consumer" />
                             <span class="type-icon">🧑‍🍳</span>
                             <span class="type-label">Consumer</span>
+                            <span class="type-sub">Fund donations</span>
                         </label>
                     </div>
                 </div>
@@ -124,6 +138,57 @@
 
                 <p class="error-msg hidden" id="registerError"></p>
                 <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+            </form>
+
+            <div class="auth-divider"><span>or</span></div>
+            <div class="google-signin" id="googleRegisterBtn"></div>
+        </div>
+
+        <!-- ── GOOGLE ROLE-SELECTION PANEL ───────────────────────────────────── -->
+        <!-- Shown after a brand-new Google user signs in and must pick a role. -->
+        <div id="googleCompletePanel" class="auth-panel card hidden">
+            <h2>One last step</h2>
+            <p class="sub-text" id="googleCompleteSub">Tell us how you'll use Route 1 Pathways.</p>
+
+            <form id="googleCompleteFormEl" novalidate>
+                <div class="form-group">
+                    <label>I am a…</label>
+                    <div class="type-selector">
+                        <label class="type-card" for="gTypeFarmer">
+                            <input type="radio" id="gTypeFarmer" name="gUserType" value="farmer" />
+                            <span class="type-icon">🌱</span>
+                            <span class="type-label">Farmer</span>
+                            <span class="type-sub">List your crops</span>
+                        </label>
+                        <label class="type-card" for="gTypeOrg">
+                            <input type="radio" id="gTypeOrg" name="gUserType" value="organization" />
+                            <span class="type-icon">🏪</span>
+                            <span class="type-label">Organization</span>
+                            <span class="type-sub">Request &amp; receive</span>
+                        </label>
+                        <label class="type-card" for="gTypeConsumer">
+                            <input type="radio" id="gTypeConsumer" name="gUserType" value="consumer" />
+                            <span class="type-icon">🧑‍🍳</span>
+                            <span class="type-label">Consumer</span>
+                            <span class="type-sub">Fund donations</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group hidden" id="gOrgSubtypeGroup">
+                    <label for="gOrgSubtype">Organization Type</label>
+                    <select id="gOrgSubtype">
+                        <option value="">— Select type —</option>
+                        <option value="restaurant">Restaurant</option>
+                        <option value="grocery_store">Grocery Store</option>
+                        <option value="food_shelf">Food Shelf</option>
+                    </select>
+                </div>
+
+                <p class="sub-text">You can add your farm/organization name, location, and phone anytime from Profile Settings.</p>
+
+                <p class="error-msg hidden" id="googleCompleteError"></p>
+                <button type="submit" class="btn btn-primary btn-block">Continue</button>
             </form>
         </div>
 

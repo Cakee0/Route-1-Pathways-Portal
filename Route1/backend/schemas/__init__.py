@@ -9,6 +9,9 @@ from .auth import (
     UserLoginRequest,
     TokenResponse,
     UserProfileResponse,
+    GoogleAuthRequest,
+    GoogleRegisterRequest,
+    GoogleAuthResponse,
 )
 from .farmers import (
     CropListingCreate,
@@ -54,6 +57,7 @@ __all__ = [
     # Auth
     "UserRegisterRequest", "UserLoginRequest",
     "TokenResponse", "UserProfileResponse",
+    "GoogleAuthRequest", "GoogleRegisterRequest", "GoogleAuthResponse",
     # Farmers
     "CropListingCreate", "CropListingUpdate", "CropListingResponse",
     # Browse

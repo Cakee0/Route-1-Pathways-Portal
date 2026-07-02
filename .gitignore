@@ -1,0 +1,26 @@
+# ── Secrets / environment ───────────────────────────────────────────────────
+# Never commit database credentials or signing keys.
+.env
+*.env
+!.env.example
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ── OS / editor ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ── Local tooling ───────────────────────────────────────────────────────────
+.claude/
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+*.log

@@ -1,0 +1,158 @@
+<!-- components/landing.html — public cover page shown before auth (default view) -->
+
+<div class="landing">
+
+    <!-- ══ HERO ════════════════════════════════════════════════════════════════ -->
+    <header class="landing-hero">
+
+        <!-- Sky: the sun + clouds drifting across the whole hero, behind the copy -->
+        <div class="landing-sun" aria-hidden="true"></div>
+        <div class="landing-clouds" aria-hidden="true">
+            <span class="lp-cloud c1"></span>
+            <span class="lp-cloud c2"></span>
+            <span class="lp-cloud c3"></span>
+            <span class="lp-cloud c4"></span>
+            <span class="lp-cloud c5"></span>
+        </div>
+
+        <div class="landing-hero-inner">
+            <p class="landing-eyebrow">Minnesota food rescue marketplace</p>
+            <h1 class="landing-title">
+                Good food shouldn't go to waste.<br>
+                Let's get the surplus harvest to neighbors who need it.
+            </h1>
+            <p class="landing-sub">
+                Route 1 Pathways connects local farmers, food shelves, and neighbors
+                so surplus crops feed people — not landfills.
+            </p>
+            <div class="landing-cta-row">
+                <button class="btn btn-primary landing-cta" id="landingCreateBtn">Create your free account</button>
+                <button class="landing-login-link" id="landingLoginBtn">Log in</button>
+            </div>
+        </div>
+
+        <!-- Ground: hills, barn, tree & field — a band along the bottom, in front of
+             the sky so the sun rises from behind the hills -->
+        <div class="landing-ground" aria-hidden="true">
+            <svg class="landing-ground-svg" viewBox="0 0 1440 360" preserveAspectRatio="xMidYMax slice">
+                <defs>
+                    <linearGradient id="fieldGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#d99a2b" />
+                        <stop offset="1" stop-color="#a86d12" />
+                    </linearGradient>
+                </defs>
+
+                <!-- hills, back to front -->
+                <path class="scene-hill hill-far"
+                    d="M0,170 C240,130 480,150 720,140 C960,130 1200,160 1440,140 L1440,360 L0,360 Z" />
+                <path class="scene-hill hill-mid"
+                    d="M0,232 C300,192 520,222 760,206 C1040,188 1260,226 1440,210 L1440,360 L0,360 Z" />
+                <path class="scene-hill hill-near"
+                    d="M0,292 C260,258 540,286 820,272 C1080,258 1300,286 1440,276 L1440,360 L0,360 Z" />
+
+                <!-- barn + silo on the near hill -->
+                <g class="scene-farm">
+                    <rect class="farm-silo" x="250" y="232" width="26" height="52" rx="2" />
+                    <path class="farm-silo-roof" d="M249,233 Q263,213 277,233 Z" />
+                    <rect class="farm-barn" x="286" y="250" width="58" height="34" />
+                    <path class="farm-roof" d="M282,250 L315,230 L348,250 Z" />
+                </g>
+
+                <!-- a tree that sways in the wind -->
+                <g class="scene-tree">
+                    <rect class="tree-trunk" x="385" y="258" width="6" height="28" rx="2" />
+                    <circle class="tree-top" cx="388" cy="250" r="17" />
+                    <circle class="tree-top" cx="376" cy="257" r="12" />
+                    <circle class="tree-top" cx="400" cy="257" r="12" />
+                </g>
+
+                <!-- gold field foreground -->
+                <path class="scene-field"
+                    d="M0,322 C320,304 700,318 1040,310 C1240,305 1380,316 1440,312 L1440,360 L0,360 Z" />
+            </svg>
+        </div>
+    </header>
+
+    <!-- ══ HOW IT WORKS ════════════════════════════════════════════════════════ -->
+    <section class="landing-section landing-how reveal">
+        <div class="landing-wrap">
+            <p class="landing-section-eyebrow">How it works</p>
+            <h2 class="landing-section-title">One route, from field to table</h2>
+
+            <div class="landing-route">
+                <div class="route-stop">
+                    <div class="route-icon">🌱</div>
+                    <h3>Farmers list what they grow</h3>
+                    <p>Post your crops, set a price or mark them donation-ready, and say whether you can help
+                        with transport.</p>
+                </div>
+                <div class="route-stop">
+                    <div class="route-icon">🥫</div>
+                    <h3>Organizations open opportunities</h3>
+                    <p>Food shelves, grocers, and restaurants turn surplus into donation opportunities neighbors
+                        can fund.</p>
+                </div>
+                <div class="route-stop">
+                    <div class="route-icon">🤝</div>
+                    <h3>Neighbors fund the harvest</h3>
+                    <p>Chip in on a crop — on your own or together with others — and earn rewards as you give.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ WHY IT MATTERS ══════════════════════════════════════════════════════ -->
+    <section class="landing-section landing-why reveal">
+        <div class="landing-wrap landing-why-grid">
+            <div class="landing-why-copy">
+                <p class="landing-section-eyebrow">Why it matters</p>
+                <h2 class="landing-section-title">Plenty of food. Not enough of it reaching people.</h2>
+                <p class="landing-why-lead">
+                    About a third of the food grown in this country never gets eaten — while millions of families
+                    a few miles away can't count on their next meal. The food already exists. What's missing is
+                    the path between them.
+                </p>
+                <p class="landing-why-lead">
+                    That path is what Route 1 builds: a direct line from a Minnesota farm with extra to a neighbor
+                    who needs it.
+                </p>
+            </div>
+            <div class="landing-stats">
+                <div class="landing-stat">
+                    <span class="landing-stat-num num">~⅓</span>
+                    <span class="landing-stat-label">of the food grown in the U.S. goes uneaten</span>
+                </div>
+                <div class="landing-stat">
+                    <span class="landing-stat-num num">40M+</span>
+                    <span class="landing-stat-label">people in the U.S. face food insecurity</span>
+                </div>
+                <div class="landing-stat">
+                    <span class="landing-stat-num num">100%</span>
+                    <span class="landing-stat-label">of what's rescued here goes to a Minnesota community</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ SECOND CTA ══════════════════════════════════════════════════════════ -->
+    <section class="landing-cta-band reveal">
+        <div class="landing-wrap landing-cta-band-inner">
+            <div>
+                <h2 class="landing-cta-band-title">Help good food find its way home.</h2>
+                <p class="landing-cta-band-sub">
+                    Join Minnesota's farmers, food shelves, and neighbors on Route 1 Pathways.
+                </p>
+            </div>
+            <button class="btn btn-primary landing-cta landing-cta-light" id="landingCreateBtn2">
+                Create your free account
+            </button>
+        </div>
+    </section>
+
+    <!-- ══ FOOTER ══════════════════════════════════════════════════════════════ -->
+    <footer class="landing-footer">
+        <span class="landing-foot-brand">Route <strong>1</strong> Pathways</span>
+        <span class="landing-foot-tag">A Minnesota food rescue marketplace</span>
+    </footer>
+
+</div>

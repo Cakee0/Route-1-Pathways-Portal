@@ -47,7 +47,10 @@ class User(Base):
 
     id               = Column(Integer, primary_key=True, index=True)
     email            = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password  = Column(String(255), nullable=False)
+    # Nullable: accounts created via "Sign in with Google" have no password.
+    hashed_password  = Column(String(255), nullable=True)
+    # Google account subject id ("sub"); set when a user links / signs in with Google.
+    google_id        = Column(String(255), unique=True, index=True, nullable=True)
 
     # Role
     user_type        = Column(Enum(UserTypeEnum), nullable=False)

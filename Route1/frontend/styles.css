@@ -1,40 +1,96 @@
 /* =============================================================================
-   Route 1 — styles.css  (v2)
+   Route 1 — styles.css  (v3 — "A Minnesota field through the season")
    Minnesota food rescue marketplace
-   Design tokens: forest-green palette, clean card-based layout
+
+   Palette grounded in MN prairie farmland: black-dirt soil, north-woods pine,
+   midsummer field green, young-leaf sprout, harvest gold. Gold is the VALUE
+   color — used only for rescued value ($ pledged, points, funding goals).
+   Type: Zilla Slab (agrarian display) · Public Sans (civic body) · Plex Mono (data).
+   Signature: "the harvest fill" — a gold gauge that fills a vessel toward a goal
+   (vertical grain-silo on points; notched crate-fill on funding).
    ============================================================================= */
 
 /* ── CSS Variables ──────────────────────────────────────────────────────────── */
 :root {
-    --green-900: #1b4332;
-    --green-700: #2d6a4f;
-    --green-500: #40916c;
-    --green-400: #52b788;
-    --green-200: #b7e4c7;
-    --green-100: #d8f3dc;
-    --green-50: #f0faf4;
+    /* Subject palette */
+    --soil: #2b2722;
+    /* prairie loam — body ink, warm near-black */
+    --soil-soft: #4a4239;
+    /* softened soil — secondary text */
+    --pine: #1f3d2e;
+    /* north-woods evergreen — header, hero, dark surfaces */
+    --pine-deep: #162c21;
+    /* deepest pine — hover on dark */
+    --field: #3c6e4a;
+    /* midsummer field — primary actions, links */
+    --field-dark: #2c5438;
+    /* field hover */
+    --sprout: #88a86a;
+    /* young leaf / olive — secondary accents, growing states */
+    --sprout-soft: #e4ecd9;
+    /* palest sprout — tints, hovers, fills */
+    --harvest: #c8881f;
+    /* harvest gold — THE value color */
+    --harvest-deep: #a86d12;
+    /* gold hover / text-on-light */
+    --harvest-soft: #f6e8cf;
+    /* palest gold — value tints, gauge backing */
 
-    --amber-400: #f4a261;
-    --red-500: #e63946;
-    --red-100: #fde8ea;
+    /* Surfaces & neutrals (warm, soil-tinted — not cold slate) */
+    --morning: #edf0ea;
+    /* dawn over a field — app background (cool, NOT cream) */
+    --paper: #ffffff;
+    /* cards */
+    --stone-100: #f3f4ee;
+    /* faint fill / zebra */
+    --stone-200: #e5e6dd;
+    /* borders, dividers, track backgrounds */
+    --stone-300: #cfd1c4;
+    /* stronger borders, input outline */
+    --ash: #6f7268;
+    /* muted text (warm gray-green) */
 
-    --gray-900: #1a1a2e;
-    --gray-700: #374151;
-    --gray-500: #6b7280;
-    --gray-300: #d1d5db;
-    --gray-100: #f3f4f6;
-    --white: #ffffff;
+    /* Status */
+    --clay: #b4472e;
+    /* error / destructive — earthy brick, not fire-engine red */
+    --clay-soft: #f7e6e1;
 
-    --radius-sm: 6px;
-    --radius-md: 12px;
-    --radius-lg: 18px;
+    /* ---- Back-compat aliases (so existing class names keep working) ---- */
+    --green-900: var(--pine);
+    --green-700: var(--field);
+    --green-500: var(--field);
+    --green-400: var(--sprout);
+    --green-300: var(--sprout);
+    --green-200: var(--sprout-soft);
+    --green-100: var(--sprout-soft);
+    --green-50: var(--stone-100);
+    --amber-400: var(--harvest);
+    --amber-100: var(--harvest-soft);
+    --red-500: var(--clay);
+    --red-100: var(--clay-soft);
+    --gray-900: var(--soil);
+    --gray-700: var(--soil-soft);
+    --gray-500: var(--ash);
+    --gray-300: var(--stone-300);
+    --gray-200: var(--stone-200);
+    --gray-100: var(--stone-100);
+    --white: var(--paper);
 
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .04);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, .10), 0 2px 4px rgba(0, 0, 0, .06);
-    --shadow-lg: 0 10px 24px rgba(0, 0, 0, .12);
+    --radius-sm: 7px;
+    --radius-md: 13px;
+    --radius-lg: 20px;
+
+    /* Soil-tinted shadows — warmer than neutral black */
+    --shadow-sm: 0 1px 2px rgba(43, 39, 34, .06), 0 1px 3px rgba(43, 39, 34, .05);
+    --shadow-md: 0 4px 14px rgba(43, 39, 34, .10), 0 2px 5px rgba(43, 39, 34, .06);
+    --shadow-lg: 0 14px 34px rgba(43, 39, 34, .16);
 
     --transition: 180ms ease;
-    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    /* Type roles */
+    --font: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Zilla Slab", Georgia, "Times New Roman", serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", "Consolas", monospace;
 }
 
 /* ── Reset ──────────────────────────────────────────────────────────────────── */
@@ -53,13 +109,20 @@ html {
 
 body {
     font-family: var(--font);
-    color: var(--gray-900);
-    background: var(--gray-100);
+    color: var(--soil);
+    /* a soft, warm wash instead of a flat fill — barely-there dawn light */
+    background:
+        radial-gradient(55% 45% at 100% 0%, rgba(200, 136, 31, .07), transparent 60%),
+        radial-gradient(50% 40% at 0% 0%, rgba(60, 110, 74, .05), transparent 55%),
+        linear-gradient(180deg, var(--morning) 0%, #eef1ea 45%, #f3efe5 100%);
+    background-attachment: fixed;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 a {
-    color: var(--green-500);
+    color: var(--field);
     text-decoration: none;
 }
 
@@ -71,20 +134,44 @@ ul {
     list-style: none;
 }
 
+/* ── Global focus baseline (keyboard users see a clear ring everywhere) ──────── */
+:focus-visible {
+    outline: 3px solid var(--harvest);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+/* Mouse users don't get the ring; keyboard users always do */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
 /* ── Typography helpers ─────────────────────────────────────────────────────── */
+/* Display face (Zilla Slab) carries the big agrarian moments only. */
+h1,
+h2 {
+    font-family: var(--font-display);
+    letter-spacing: -.01em;
+    color: var(--soil);
+}
+
 h1 {
-    font-size: 1.75rem;
+    font-size: 1.9rem;
     font-weight: 700;
+    line-height: 1.1;
 }
 
 h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.15;
 }
 
+/* Small headings stay in the body sans — restraint keeps slab special. */
 h3 {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 600;
+    color: var(--soil);
 }
 
 p {
@@ -93,20 +180,98 @@ p {
 
 .sub-text {
     font-size: .875rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-top: .25rem;
+}
+
+/* "or" divider between the form and the Google button */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin: 1.25rem 0 1rem;
+    color: var(--ash);
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--stone-200);
+}
+
+/* Container Google Identity Services renders its button into */
+.google-signin {
+    display: flex;
+    justify-content: center;
+    min-height: 40px;
+}
+
+/* Ledger numerals — prices, quantities, amounts, points, timestamps */
+.num,
+.points-big,
+.stat-value,
+.donation-amount-badge,
+.points-hist-pts {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
 }
 
 .hidden {
     display: none !important;
 }
 
+/* ── Reduced motion: honor the OS setting for every animation ────────────────── */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
 /* ── Card ────────────────────────────────────────────────────────────────────── */
 .card {
-    background: var(--white);
+    background: var(--paper);
+    border: 1px solid var(--stone-200);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     padding: 1.5rem;
+}
+
+/* Card heading helpers used across components */
+.card-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--soil);
+}
+
+.card-sub {
+    font-size: .875rem;
+    color: var(--ash);
+    margin-top: .15rem;
+    margin-bottom: .25rem;
+}
+
+.card-header-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+/* Muted helper (used widely in markup + JS) */
+.muted {
+    color: var(--ash);
 }
 
 /* ── Buttons ────────────────────────────────────────────────────────────────── */
@@ -128,48 +293,49 @@ p {
 }
 
 .btn:focus-visible {
-    outline: 3px solid var(--green-400);
+    outline: 3px solid var(--harvest);
     outline-offset: 2px;
 }
 
 .btn-primary {
-    background: var(--green-700);
-    color: var(--white);
+    background: var(--field);
+    color: var(--paper);
 }
 
 .btn-primary:hover {
-    background: var(--green-900);
+    background: var(--field-dark);
 }
 
 .btn-secondary {
-    background: var(--green-100);
-    color: var(--green-700);
-    border-color: var(--green-200);
+    background: var(--sprout-soft);
+    color: var(--field-dark);
+    border-color: transparent;
 }
 
 .btn-secondary:hover {
-    background: var(--green-200);
+    background: #d6e2c4;
 }
 
 .btn-danger {
-    background: var(--white);
-    color: var(--red-500);
-    border-color: var(--red-500);
+    background: var(--paper);
+    color: var(--clay);
+    border-color: var(--stone-300);
 }
 
 .btn-danger:hover {
-    background: var(--red-100);
+    background: var(--clay-soft);
+    border-color: var(--clay);
 }
 
 .btn-ghost {
     background: transparent;
-    color: var(--gray-500);
-    border-color: var(--gray-300);
+    color: var(--ash);
+    border-color: var(--stone-300);
 }
 
 .btn-ghost:hover {
-    background: var(--gray-100);
-    color: var(--gray-700);
+    background: var(--stone-100);
+    color: var(--soil);
 }
 
 .btn-block {
@@ -287,12 +453,31 @@ select {
 }
 
 .error-msg {
-    color: var(--red-500);
+    color: var(--clay);
     font-size: .85rem;
-    background: var(--red-100);
+    background: var(--clay-soft);
+    border: 1px solid rgba(180, 71, 46, .25);
     border-radius: var(--radius-sm);
     padding: .5rem .75rem;
     margin-top: .5rem;
+}
+
+/* Saved/confirmation message — the success counterpart to .error-msg */
+.success-msg {
+    color: var(--field-dark);
+    font-size: .85rem;
+    background: var(--sprout-soft);
+    border: 1px solid rgba(60, 110, 74, .25);
+    border-radius: var(--radius-sm);
+    padding: .5rem .75rem;
+    margin-top: .5rem;
+}
+
+/* Inline "optional/hint" qualifier next to a field label */
+.optional {
+    font-weight: 400;
+    color: var(--ash);
+    font-size: .8rem;
 }
 
 /* ── Toast ───────────────────────────────────────────────────────────────────── */
@@ -332,8 +517,10 @@ select {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: var(--green-700);
+    background: var(--pine);
     box-shadow: var(--shadow-md);
+    /* a thin harvest line under the bar — the only gold in the chrome */
+    border-bottom: 2px solid var(--harvest);
 }
 
 .header-inner {
@@ -366,26 +553,24 @@ select {
 }
 
 .brand-name {
-    font-size: 1.15rem;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
     font-weight: 700;
-    letter-spacing: -.5px;
+    letter-spacing: -.01em;
 }
 
-.brand strong {
-    color: var(--green-200);
-}
-
+.brand strong,
 .brand-name strong {
-    color: var(--green-200);
+    color: var(--harvest);
 }
 
 .brand-sub {
     font-size: .58rem;
     font-weight: 700;
-    letter-spacing: .18em;
+    letter-spacing: .2em;
     text-transform: uppercase;
-    color: var(--green-200);
-    opacity: .85;
+    color: var(--sprout-soft);
+    opacity: .9;
     margin-top: 2px;
 }
 
@@ -502,23 +687,99 @@ select {
     gap: 1.5rem;
 }
 
+/* Every page's header is a soft "dawn band" — the landing's sky language as a
+   slim strip: warm gradient, a drifting cloud, a pulsing sun glow, gold horizon.
+   The content below each header stays on the clean background. */
 .page-header {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--stone-200);
+    border-radius: var(--radius-md);
+    background:
+        radial-gradient(80% 140% at 92% -30%, rgba(200, 136, 31, .14), transparent 60%),
+        linear-gradient(110deg, var(--sprout-soft) 0%, #eef2e7 48%, #f7eedb 100%);
+}
+
+/* gold horizon line along the bottom of the band */
+.page-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--sprout), var(--harvest));
+    opacity: .8;
+}
+
+/* a soft cloud drifting slowly across the band */
+.page-header::before {
+    content: "";
+    position: absolute;
+    top: 26%;
+    left: -90px;
+    width: 60px;
+    height: 18px;
+    background: #fffdf8;
+    border-radius: 20px;
+    box-shadow: 16px -7px 0 -3px #fffdf8, 34px -1px 0 -5px #fffdf8;
+    opacity: .55;
+    pointer-events: none;
+    animation: headerCloud 40s linear infinite;
+}
+
+/* keep the title + actions above the decorative sky */
+.page-header>* {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes headerCloud {
+    from {
+        translate: 0;
+    }
+
+    to {
+        translate: calc(100vw + 160px);
+    }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
    AUTH PAGE
    ══════════════════════════════════════════════════════════════════════════════ */
 .auth-page {
-    min-height: calc(100vh - 60px);
+    position: relative;
+    overflow: hidden;
+    min-height: calc(100vh - 62px);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1rem;
+    padding: 2.5rem 1rem;
+    /* dawn over a field: morning lifting to a warm gold glow at the corner */
+    background:
+        radial-gradient(48% 44% at 88% 90%, rgba(200, 136, 31, .16), transparent 70%),
+        radial-gradient(120% 80% at 50% -10%, rgba(31, 61, 46, .08), transparent 60%),
+        linear-gradient(180deg, var(--morning) 0%, #f1ece1 60%, #f8e9cf 100%);
+}
+
+/* drifting clouds behind the auth card */
+.auth-sky {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.auth-container {
+    position: relative;
+    z-index: 1;
 }
 
 .auth-container {
@@ -529,37 +790,58 @@ select {
     gap: 1rem;
 }
 
+/* Hero band — the deep-pine "arrival" plate carrying the Route-1 mark */
 .auth-brand {
     text-align: center;
-    margin-bottom: .5rem;
+    background: var(--pine);
+    color: var(--paper);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem 1.75rem;
+    margin-bottom: .75rem;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Harvest horizon line across the hero */
+.auth-brand::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--sprout), var(--harvest));
 }
 
 .auth-brand .brand-icon {
     font-size: 2.5rem;
-    margin: 0 auto .25rem;
+    margin: 0 auto .35rem;
 }
 
 .auth-brand h1 {
-    font-size: 2rem;
+    font-size: 2.4rem;
+    color: var(--paper);
 }
 
 .auth-brand strong {
-    color: var(--green-500);
+    color: var(--harvest);
 }
 
 .auth-brand-sub {
-    font-size: .65rem;
+    font-size: .68rem;
     font-weight: 700;
-    letter-spacing: .22em;
+    letter-spacing: .24em;
     text-transform: uppercase;
-    color: var(--green-500);
-    margin-top: .15rem;
-    margin-bottom: .1rem;
+    color: var(--sprout-soft);
+    margin-top: .1rem;
+    margin-bottom: .35rem;
 }
 
 .auth-brand p {
-    color: var(--gray-500);
+    color: rgba(255, 255, 255, .82);
     margin-top: .25rem;
+    font-size: .95rem;
 }
 
 .auth-tabs {
@@ -569,24 +851,30 @@ select {
 
 .auth-tab {
     flex: 1;
-    padding: .6rem;
-    background: var(--white);
-    border: 2px solid var(--gray-300);
+    padding: .65rem;
+    background: var(--paper);
+    border: 2px solid var(--stone-200);
     border-radius: var(--radius-sm);
     font-size: .9rem;
     font-weight: 600;
     cursor: pointer;
-    color: var(--gray-500);
+    color: var(--ash);
     font-family: var(--font);
     transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 
-.auth-tab.active {
-    background: var(--green-700);
-    border-color: var(--green-700);
-    color: var(--white);
+.auth-tab:hover {
+    border-color: var(--sprout);
+    color: var(--field-dark);
 }
 
+.auth-tab.active {
+    background: var(--field);
+    border-color: var(--field);
+    color: var(--paper);
+}
+
+/* Role picker — three sturdy "signpost" cards pointing the way in */
 .type-selector {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -598,36 +886,55 @@ select {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: .35rem;
-    padding: .85rem .5rem;
-    border: 2px solid var(--gray-300);
-    border-radius: var(--radius-sm);
+    gap: .4rem;
+    padding: 1rem .5rem;
+    border: 2px solid var(--stone-200);
+    border-radius: var(--radius-md);
+    background: var(--paper);
     cursor: pointer;
-    transition: border-color var(--transition), background var(--transition);
+    transition: border-color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition);
 }
 
 .type-card:hover {
-    border-color: var(--green-400);
-    background: var(--green-50);
+    border-color: var(--sprout);
+    background: var(--stone-100);
+    transform: translateY(-1px);
 }
 
 .type-card input[type="radio"] {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
 }
 
 .type-card:has(input:checked) {
-    border-color: var(--green-700);
-    background: var(--green-50);
+    border-color: var(--field);
+    background: var(--sprout-soft);
+    box-shadow: 0 0 0 3px rgba(60, 110, 74, .14);
+}
+
+/* Keyboard focus reaches the label since the radio is visually hidden */
+.type-card:has(input:focus-visible) {
+    outline: 3px solid var(--harvest);
+    outline-offset: 2px;
 }
 
 .type-icon {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
 }
 
 .type-label {
-    font-size: .8rem;
+    font-size: .82rem;
     font-weight: 600;
-    color: var(--gray-700);
+    color: var(--soil);
+}
+
+.type-sub {
+    font-size: .68rem;
+    color: var(--ash);
+    text-align: center;
+    line-height: 1.2;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -636,6 +943,22 @@ select {
 .table-wrapper {
     overflow-x: auto;
     margin-top: .5rem;
+}
+
+/* Farmer "ledger": Quantity (col 2) & Price/unit (col 3) as tabular mono — the
+   scale-house ticket read. Column order is fixed in the markup. */
+.farmer-dashboard td:nth-child(2),
+.farmer-dashboard td:nth-child(3) {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: .82rem;
+    color: var(--soil);
+    white-space: nowrap;
+}
+
+.farmer-dashboard td:nth-child(3) em {
+    font-family: var(--font);
+    color: var(--ash);
 }
 
 table {
@@ -647,50 +970,67 @@ table {
 th {
     text-align: left;
     padding: .65rem .75rem;
-    font-size: .78rem;
+    font-size: .72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .04em;
-    color: var(--gray-500);
-    border-bottom: 2px solid var(--gray-300);
+    letter-spacing: .06em;
+    color: var(--ash);
+    border-bottom: 2px solid var(--stone-300);
     white-space: nowrap;
 }
 
 td {
-    padding: .7rem .75rem;
-    border-bottom: 1px solid var(--gray-100);
+    padding: .8rem .75rem;
+    border-bottom: 1px solid var(--stone-200);
     vertical-align: middle;
+}
+
+/* Ledger feel: quantities & prices align as tabular mono numerals */
+td.num,
+.col-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: .82rem;
+    color: var(--soil);
 }
 
 tr:last-child td {
     border-bottom: none;
 }
 
+tbody tr {
+    transition: background var(--transition);
+}
+
 tr:hover td {
-    background: var(--green-50);
+    background: var(--stone-100);
 }
 
 .badge {
-    display: inline-block;
-    padding: .2rem .55rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .2rem .6rem;
     border-radius: 999px;
     font-size: .75rem;
     font-weight: 600;
+    letter-spacing: .01em;
 }
 
 .badge-green {
-    background: var(--green-100);
-    color: var(--green-700);
+    background: var(--sprout-soft);
+    color: var(--field-dark);
 }
 
 .badge-gray {
-    background: var(--gray-100);
-    color: var(--gray-500);
+    background: var(--stone-200);
+    color: var(--soil-soft);
 }
 
+/* Amber badge = rescued value / donation-eligible (the gold "rescue" tag) */
 .badge-amber {
-    background: #fdf3e3;
-    color: #9a600d;
+    background: var(--harvest-soft);
+    color: var(--harvest-deep);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -710,6 +1050,70 @@ tr:hover td {
 
 .filters-sidebar h3 {
     margin-bottom: .25rem;
+}
+
+/* ── Role plate — the "Viewing as: …" org-subtype context, made intentional ──
+   app.js writes the label text into #browseSubtitle and sets
+   document.body[data-org-subtype]; the ::before icon is driven purely by CSS so
+   a restaurant / grocery / food shelf each feels addressed without three themes. */
+.role-plate {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    margin-top: .5rem;
+    padding: .3rem .7rem;
+    border-radius: 999px;
+    background: var(--sprout-soft);
+    color: var(--field-dark);
+    border: 1px solid transparent;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+.role-plate::before {
+    content: "🏢";
+    font-size: .95rem;
+}
+
+body[data-org-subtype="restaurant"] .role-plate::before {
+    content: "🍽️";
+}
+
+body[data-org-subtype="grocery_store"] .role-plate::before {
+    content: "🛒";
+}
+
+/* Food shelves are the rescue recipients — accent them in harvest gold */
+body[data-org-subtype="food_shelf"] .role-plate {
+    background: var(--harvest-soft);
+    color: var(--harvest-deep);
+    border-color: rgba(200, 136, 31, .35);
+}
+
+body[data-org-subtype="food_shelf"] .role-plate::before {
+    content: "🥫";
+}
+
+/* ── Rescue filter — the donation-eligible toggle, elevated from a plain row ──
+   Shown for consumers and food-shelf orgs (toggled by app.js). Gold framing so
+   the food-rescue flow reads as purpose-built, not bolted on. */
+#donationFilterGroup {
+    margin-top: .85rem;
+    padding: .75rem .85rem;
+    background: var(--harvest-soft);
+    border: 1px solid rgba(200, 136, 31, .3);
+    border-left: 3px solid var(--harvest);
+    border-radius: var(--radius-sm);
+}
+
+#donationFilterGroup .donation-check {
+    color: var(--harvest-deep);
+    font-weight: 600;
+}
+
+#donationFilterGroup .checkbox-label input[type="checkbox"] {
+    accent-color: var(--harvest-deep);
 }
 
 .filters-sidebar .btn-block+.btn-block {
@@ -746,33 +1150,39 @@ tr:hover td {
 }
 
 .farmer-card {
-    background: var(--white);
+    background: var(--paper);
+    border: 1px solid var(--stone-200);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
-    transition: box-shadow var(--transition), transform var(--transition);
+    transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
     cursor: default;
 }
 
 .farmer-card:hover {
     box-shadow: var(--shadow-md);
+    border-color: var(--sprout);
     transform: translateY(-2px);
 }
 
+/* Header reads like a hand-lettered seed-packet banner */
 .farmer-card-header {
-    background: var(--green-700);
-    color: var(--white);
+    background: var(--pine);
+    color: var(--paper);
     padding: 1rem 1.25rem .85rem;
+    border-bottom: 3px solid var(--harvest);
 }
 
 .farmer-card-header h4 {
-    font-size: 1rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
 }
 
 .farmer-location {
     font-size: .8rem;
-    color: rgba(255, 255, 255, .8);
+    color: var(--sprout-soft);
     margin-top: .2rem;
 }
 
@@ -788,17 +1198,18 @@ tr:hover td {
 }
 
 .crop-chip {
-    background: var(--green-100);
-    color: var(--green-700);
+    background: var(--sprout-soft);
+    color: var(--field-dark);
     border-radius: 999px;
     padding: .2rem .65rem;
     font-size: .775rem;
     font-weight: 600;
 }
 
+/* Donation-eligible crop = rescued value → harvest gold */
 .crop-chip.donation {
-    background: #fff3cd;
-    color: #856404;
+    background: var(--harvest-soft);
+    color: var(--harvest-deep);
 }
 
 .farmer-meta {
@@ -1048,9 +1459,36 @@ tr:hover td {
     }
 }
 
+@media (max-width: 720px) {
+
+    /* Header wraps to two rows instead of overflowing off-screen */
+    .header-inner {
+        height: auto;
+        flex-wrap: wrap;
+        padding: .6rem 1rem;
+        row-gap: .5rem;
+    }
+
+    .nav-links {
+        order: 3;
+        width: 100%;
+        margin-left: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .header-spacer {
+        display: none;
+    }
+
+    .header-user {
+        margin-left: auto;
+    }
+}
+
 @media (max-width: 600px) {
     .header-inner {
-        padding: 0 1rem;
+        padding: .6rem 1rem;
     }
 
     .main-content {
@@ -1195,8 +1633,9 @@ tr:hover td {
 
 .points-big {
     font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--green-700);
+    font-weight: 600;
+    color: var(--soil);
+    letter-spacing: -.02em;
 }
 
 .points-label {
@@ -1209,8 +1648,15 @@ tr:hover td {
     display: flex;
     gap: .5rem;
     margin-bottom: 1.5rem;
-    border-bottom: 2px solid var(--gray-200);
+    border-bottom: 2px solid var(--stone-200);
     padding-bottom: 0;
+    /* scroll the tab strip itself on narrow screens instead of widening the page */
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.consumer-view-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .consumer-tab {
@@ -1219,21 +1665,23 @@ tr:hover td {
     padding: .6rem 1.25rem;
     font-size: .95rem;
     font-weight: 600;
-    color: var(--gray-500);
+    color: var(--ash);
     cursor: pointer;
+    white-space: nowrap;
     border-bottom: 3px solid transparent;
     margin-bottom: -2px;
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    transition: color var(--transition), border-color var(--transition);
+    transition: color var(--transition), border-color var(--transition), background var(--transition);
 }
 
 .consumer-tab:hover {
-    color: var(--green-700);
+    color: var(--field-dark);
+    background: var(--stone-100);
 }
 
 .consumer-tab.active {
-    color: var(--green-700);
-    border-bottom-color: var(--green-500);
+    color: var(--field-dark);
+    border-bottom-color: var(--harvest);
 }
 
 .consumer-view-panel {}
@@ -1268,31 +1716,35 @@ tr:hover td {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: .75rem;
     padding: 1.25rem 1.25rem .75rem;
-    background: var(--green-50, #f0faf4);
+    background: var(--stone-100);
+    border-bottom: 1px solid var(--stone-200);
 }
 
 .donation-org {
-    font-size: .8rem;
-    color: var(--gray-500);
-    font-weight: 600;
+    font-size: .72rem;
+    color: var(--ash);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: .07em;
 }
 
 .donation-crop {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--green-900);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--soil);
     margin-top: .15rem;
 }
 
+/* The goal amount — a pine chip carrying a gold ledger numeral */
 .donation-amount-badge {
-    background: var(--green-700);
-    color: var(--white);
+    background: var(--pine);
+    color: var(--harvest);
     border-radius: var(--radius-sm);
-    padding: .3rem .75rem;
-    font-weight: 700;
+    padding: .35rem .7rem;
+    font-weight: 600;
     font-size: 1rem;
     white-space: nowrap;
 }
@@ -1324,25 +1776,66 @@ tr:hover td {
     gap: .25rem;
 }
 
-.donation-bar-wrap {
-    height: 8px;
-    border-radius: 999px;
-    background: var(--gray-200);
+/* ── SIGNATURE: "The Harvest Fill" — crate-fill funding meter ─────────────────
+   A slatted wooden crate that fills with harvest gold toward the goal. Shared by
+   donation cards, group donations, wishlist items and the funding modals so the
+   whole app speaks one visual language for "value routed toward feeding people."
+   (.harvest-crate / .harvest-fill are the canonical hooks; the existing
+   .donation-bar-* / .group-progress-* class names alias onto them so the JS-
+   generated markup needs no changes.) */
+.harvest-crate,
+.donation-bar-wrap,
+.group-progress-bar {
+    position: relative;
+    height: 16px;
+    border-radius: 5px;
+    background: var(--harvest-soft);
+    border: 1px solid rgba(168, 109, 18, .35);
     overflow: hidden;
 }
 
-.donation-bar-fill {
+/* Crate slats — faint vertical dividers that make it read as sections of a crate */
+.harvest-crate::after,
+.donation-bar-wrap::after,
+.group-progress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(90deg,
+            transparent 0,
+            transparent 21px,
+            rgba(43, 39, 34, .14) 21px,
+            rgba(43, 39, 34, .14) 22px);
+    z-index: 2;
+}
+
+.harvest-fill,
+.donation-bar-fill,
+.group-progress-fill {
+    position: relative;
+    z-index: 1;
     height: 100%;
-    background: var(--green-500);
-    border-radius: 999px;
+    border-radius: 4px 0 0 4px;
+    /* gold grain: a warm fill with a subtle diagonal grain texture */
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .14) 0 3px, transparent 3px 7px),
+        linear-gradient(90deg, var(--harvest-deep), var(--harvest));
     transition: width .6s ease;
+}
+
+/* When the goal is met the crate is full — round the right edge to "seal" it */
+.donation-bar-fill[style*="100%"],
+.group-progress-fill[style*="100%"] {
+    border-radius: 4px;
 }
 
 .group-badge {
     display: inline-flex;
     align-items: center;
-    background: var(--amber-100, #fef3c7);
-    color: #92400e;
+    gap: .3rem;
+    background: var(--sprout-soft);
+    color: var(--field-dark);
     border-radius: 999px;
     padding: .2rem .75rem;
     font-size: .8rem;
@@ -1356,25 +1849,21 @@ tr:hover td {
     margin: .25rem 0;
 }
 
-.group-progress-bar {
-    height: 8px;
-    border-radius: 999px;
-    background: var(--gray-200);
-    overflow: hidden;
-}
-
-.group-progress-fill {
-    height: 100%;
-    background: var(--amber-400, #f4a261);
-    border-radius: 999px;
-    transition: width .6s ease;
-}
+/* (.group-progress-bar / .group-progress-fill now styled by the shared
+   "Harvest Fill" crate rule above — old flat-bar definitions removed so they
+   don't override the signature.) */
 
 .group-progress-labels {
     display: flex;
     justify-content: space-between;
-    font-size: .78rem;
-    color: var(--gray-500);
+    font-size: .8rem;
+    color: var(--soil-soft);
+    font-weight: 600;
+}
+
+/* The "more needed" half of the readout in gold — the call to fill the crate */
+.group-progress-labels span:last-child {
+    color: var(--harvest-deep);
 }
 
 .donation-card-footer {
@@ -1422,8 +1911,10 @@ tr:hover td {
 }
 
 .modal-title {
-    font-size: 1.2rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
     margin-bottom: 1.25rem;
 }
 
@@ -1486,8 +1977,10 @@ tr:hover td {
 }
 
 .wishlist-card-header h4 {
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
 }
 
 /* Farmer search in wishlist form */
@@ -1568,53 +2061,82 @@ tr:hover td {
     flex-direction: column;
     align-items: center;
     padding: 1.5rem 0;
-    min-height: 360px;
+    height: 360px;
+    /* definite height so the silo fill's percentage resolves */
 }
 
 .vbar-wrapper {
     position: relative;
     display: flex;
     justify-content: center;
-    width: 40px;
-    flex: 1;
-    margin: 1rem 0;
+    width: 46px;
+    height: 100%;
+    margin: 0;
 }
 
+/* Silo dome — a galvanized roof cap sitting on top of the silo body */
+.vbar-wrapper::before {
+    content: "";
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 38px;
+    height: 18px;
+    background: linear-gradient(180deg, #d8dace, #bcbfb0);
+    border: 1px solid var(--stone-300);
+    border-bottom: none;
+    border-radius: 19px 19px 0 0;
+    z-index: 3;
+}
+
+/* Silo body — the empty vessel, with faint corrugated-metal rings */
 .vbar-track {
-    width: 16px;
+    width: 30px;
     height: 100%;
-    background: var(--gray-200);
-    border-radius: 999px;
+    background:
+        repeating-linear-gradient(180deg, transparent 0 13px, rgba(43, 39, 34, .06) 13px 14px),
+        var(--stone-100);
+    border: 1px solid var(--stone-300);
+    border-radius: 4px 4px 7px 7px;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    /* fill grows from bottom */
     position: relative;
 }
 
+/* Grain fill — harvest gold rising from the bottom, with a soft grain texture */
 .vbar-fill {
     width: 100%;
-    border-radius: 999px;
-    background: linear-gradient(to top, var(--green-500), var(--green-300));
-    /* height set by JS */
+    border-radius: 0 0 6px 6px;
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .12) 0 3px, transparent 3px 8px),
+        linear-gradient(to top, var(--harvest-deep), var(--harvest));
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
+    /* height set by JS; transition kept short & is overridden under reduced-motion */
 }
 
-/* Tier circle markers on the bar */
+/* a soft "grain crest" highlight at the top of the fill */
+.vbar-fill::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, .35);
+}
+
+/* Tier notches — thin rings welded across the silo at each threshold */
 .tier-marker {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 20px;
-    background: var(--green-700);
-    border: 3px solid var(--white);
-    border-radius: 50%;
-    box-shadow: var(--shadow-sm);
+    width: 38px;
+    height: 0;
+    border-top: 2px dashed rgba(43, 39, 34, .35);
+    z-index: 4;
 }
 
 /* Tier labels */
@@ -1624,7 +2146,10 @@ tr:hover td {
     gap: .6rem;
     position: absolute;
     left: 0;
-    width: 100%;
+    width: auto;
+    /* hug the left column so text doesn't run under the silo */
+    background: var(--paper);
+    padding-right: .4rem;
 }
 
 .tier-top {
@@ -1640,21 +2165,26 @@ tr:hover td {
 }
 
 .tier-circle {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: var(--gray-200);
+    background: var(--stone-200);
+    border: 1px solid var(--stone-300);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.1rem;
     flex-shrink: 0;
-    transition: background var(--transition), box-shadow var(--transition);
+    filter: grayscale(.6) opacity(.7);
+    transition: background var(--transition), box-shadow var(--transition), filter var(--transition);
 }
 
+/* Reached tier — the badge lights up gold, full color */
 .tier-circle-reached {
-    background: var(--green-700);
-    box-shadow: 0 0 0 4px var(--green-100);
+    background: var(--harvest-soft);
+    border-color: var(--harvest);
+    box-shadow: 0 0 0 4px rgba(200, 136, 31, .18);
+    filter: none;
 }
 
 .tier-info {
@@ -1688,8 +2218,9 @@ tr:hover td {
 
 .stat-value {
     font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--green-700);
+    font-weight: 600;
+    color: var(--soil);
+    letter-spacing: -.01em;
 }
 
 .stat-label {
@@ -1717,8 +2248,8 @@ tr:hover td {
 }
 
 .tier-row.tier-reached {
-    border-color: var(--green-500);
-    background: var(--green-100);
+    border-color: var(--harvest);
+    background: var(--harvest-soft);
 }
 
 .tier-icon {
@@ -1752,54 +2283,14 @@ tr:hover td {
 }
 
 .points-hist-pts {
-    color: var(--green-700);
+    color: var(--harvest-deep);
     font-size: 1rem;
-}
-
-/* ── Badges ────────────────────────────────────────────────────────────────── */
-.badge {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: .2rem .65rem;
-    font-size: .75rem;
     font-weight: 600;
 }
 
-.badge-green {
-    background: var(--green-100);
-    color: var(--green-900);
-}
-
-.badge-amber {
-    background: var(--amber-100, #fef3c7);
-    color: #92400e;
-}
-
-.badge-gray {
-    background: var(--gray-100);
-    color: var(--gray-700);
-}
-
-/* ── btn-danger ────────────────────────────────────────────────────────────── */
-.btn-danger {
-    background: var(--red-500);
-    color: var(--white);
-}
-
-.btn-danger:hover {
-    background: #c0392b;
-}
-
-/* ── btn-secondary ─────────────────────────────────────────────────────────── */
-.btn-secondary {
-    background: var(--gray-100);
-    color: var(--gray-700);
-}
-
-.btn-secondary:hover {
-    background: var(--gray-200);
-}
+/* (Duplicate .badge / .btn-danger / .btn-secondary blocks removed — canonical
+   definitions live in the Buttons and Badge sections above, so class-based and
+   element-based rules no longer silently override each other.) */
 
 /* ── Responsive adjustments ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -1825,5 +2316,916 @@ tr:hover td {
 
     .wishlist-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* =============================================================================
+   LANDING / COVER PAGE  (public, shown before auth)
+   Everything scoped under .landing so it can't bleed into login/dashboards.
+   Uses only the established "Minnesota field" tokens + the three typefaces.
+   Signature: "the field comes in" — the hero field fills with harvest gold on
+   load (the Harvest Fill motif in its largest, atmospheric form).
+   ============================================================================= */
+.landing {
+    color: var(--soil);
+}
+
+/* The landing page is injected into #app (.main-content), which is a centered
+   1280px column with padding. Break out so the hero/scene/bands go full-bleed.
+   Scoped via :has() so only the landing page is affected — dashboards keep the
+   constrained content column. */
+.main-content:has(> .landing) {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header CTA (logged-out): gold so it pops on the pine bar */
+#navRegisterBtn {
+    background: var(--harvest);
+    color: var(--soil);
+    border-color: transparent;
+}
+
+#navRegisterBtn:hover {
+    background: var(--harvest-deep);
+    color: var(--soil);
+}
+
+.landing-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.landing-hero {
+    position: relative;
+    overflow: hidden;
+    /* capped so it's right on laptops, big monitors, and phones alike */
+    min-height: clamp(560px, 82vh, 780px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem 1.5rem clamp(240px, 38vh, 360px);
+    /* dawn sky — a warm orange glow rises from the sun (bottom-right) and softens
+       outward, blending the scene into the page background */
+    background:
+        radial-gradient(58% 54% at 84% 88%, rgba(200, 136, 31, .5), rgba(200, 136, 31, .14) 42%, transparent 72%),
+        linear-gradient(180deg, var(--morning) 0%, #f3ece0 50%, #f8e9cf 100%);
+}
+
+.landing-hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.landing-eyebrow {
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    color: var(--field-dark);
+}
+
+.landing-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+    line-height: 1.06;
+    letter-spacing: -.02em;
+    color: var(--soil);
+    margin-top: .9rem;
+}
+
+.landing-sub {
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    color: var(--soil-soft);
+    max-width: 600px;
+    margin: 1.1rem auto 0;
+    line-height: 1.55;
+}
+
+.landing-cta-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Primary CTA — gold "harvest fill" sweep on hover (the motif on the button) */
+.landing-cta {
+    position: relative;
+    overflow: hidden;
+    z-index: 0;
+    font-size: 1.02rem;
+    padding: .85rem 1.6rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition), color var(--transition);
+}
+
+.landing-cta::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, var(--harvest), var(--harvest-deep));
+    transform: translateX(-101%);
+    transition: transform .38s ease;
+}
+
+.landing-cta:hover {
+    color: var(--soil);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.landing-cta:hover::before {
+    transform: translateX(0);
+}
+
+.landing-login-link {
+    background: none;
+    border: none;
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--field-dark);
+    cursor: pointer;
+    padding: .5rem .25rem;
+    border-bottom: 2px solid transparent;
+    transition: border-color var(--transition);
+}
+
+.landing-login-link:hover {
+    border-bottom-color: var(--field);
+}
+
+/* ── The scene, split into SKY (full hero) + GROUND (bottom band) ──────────────
+   The sun and clouds live in the open sky so the green hills never cover them,
+   and the sun's glow blends into the hero's orange dawn. */
+
+/* GROUND — hills, barn, tree, field as a band along the bottom, in front of sky */
+.landing-ground {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: clamp(200px, 30vh, 320px);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.landing-ground-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Fills driven by tokens so the scene stays in-palette */
+.hill-far {
+    fill: #b9cda2;
+}
+
+/* hazy distance green */
+.hill-mid {
+    fill: var(--sprout);
+}
+
+.hill-near {
+    fill: var(--field);
+}
+
+.scene-field {
+    fill: url(#fieldGrad);
+}
+
+.farm-barn {
+    fill: var(--clay);
+}
+
+/* the classic red barn — the colour pop */
+.farm-roof {
+    fill: var(--soil);
+}
+
+.farm-silo {
+    fill: #d2d5c9;
+}
+
+.farm-silo-roof {
+    fill: #b3b7a8;
+}
+
+.tree-trunk {
+    fill: var(--soil);
+}
+
+.tree-top {
+    fill: var(--field-dark);
+}
+
+/* SUN — its own sky layer; nothing green covers it. Rises on load, breathes
+   gently, and its glow melts into the hero's orange dawn. */
+.landing-sun {
+    position: absolute;
+    z-index: 1;
+    right: 11%;
+    bottom: clamp(170px, 27vh, 285px);
+    width: clamp(150px, 15vw, 260px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+            var(--harvest) 0 33%,
+            rgba(200, 136, 31, .6) 34% 44%,
+            rgba(200, 136, 31, .22) 64%,
+            transparent 78%);
+    pointer-events: none;
+    animation: sunRise 1400ms cubic-bezier(.22, .61, .36, 1) both,
+        sunPulse 9s ease-in-out 1500ms infinite;
+}
+
+@keyframes sunRise {
+    from {
+        opacity: 0;
+        transform: translateY(44px) scale(.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes sunPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.04);
+    }
+}
+
+/* CLOUDS — drift right across the whole sky, continuously. (translate/scale are
+   separate properties so the per-cloud size never fights the drift animation.) */
+.landing-clouds {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.lp-cloud {
+    position: absolute;
+    left: 0;
+    width: 90px;
+    height: 28px;
+    background: #fbf6ec;
+    border-radius: 30px;
+    opacity: .9;
+    will-change: transform;
+    animation: cloudFlow linear infinite;
+}
+
+.lp-cloud::before,
+.lp-cloud::after {
+    content: "";
+    position: absolute;
+    background: #fbf6ec;
+    border-radius: 50%;
+}
+
+.lp-cloud::before {
+    width: 42px;
+    height: 42px;
+    top: -18px;
+    left: 14px;
+}
+
+.lp-cloud::after {
+    width: 30px;
+    height: 30px;
+    top: -10px;
+    left: 46px;
+}
+
+.lp-cloud.c1 {
+    top: 14%;
+    scale: 1;
+    animation-duration: 46s;
+    animation-delay: -4s;
+}
+
+.lp-cloud.c2 {
+    top: 24%;
+    scale: .7;
+    opacity: .75;
+    animation-duration: 62s;
+    animation-delay: -28s;
+}
+
+.lp-cloud.c3 {
+    top: 9%;
+    scale: 1.25;
+    animation-duration: 54s;
+    animation-delay: -40s;
+}
+
+.lp-cloud.c4 {
+    top: 33%;
+    scale: .85;
+    opacity: .8;
+    animation-duration: 58s;
+    animation-delay: -15s;
+}
+
+.lp-cloud.c5 {
+    top: 19%;
+    scale: .6;
+    opacity: .7;
+    animation-duration: 72s;
+    animation-delay: -53s;
+}
+
+@keyframes cloudFlow {
+    from {
+        translate: -150px 0;
+    }
+
+    to {
+        translate: calc(100vw + 170px) 0;
+    }
+}
+
+/* SVG transforms need a local box */
+.scene-hill,
+.scene-field,
+.scene-farm,
+.scene-tree {
+    transform-box: fill-box;
+}
+
+/* Daybreak load sequence: hills settle back-to-front, then field + farm + tree */
+.scene-hill {
+    animation: sceneRise 900ms cubic-bezier(.22, .61, .36, 1) both;
+}
+
+.hill-far {
+    animation-delay: 120ms;
+}
+
+.hill-mid {
+    animation-delay: 260ms;
+}
+
+.hill-near {
+    animation-delay: 400ms;
+}
+
+.scene-field {
+    animation: sceneRise 900ms cubic-bezier(.22, .61, .36, 1) 520ms both;
+}
+
+.scene-farm {
+    animation: sceneGlow 800ms ease 600ms both;
+}
+
+@keyframes sceneRise {
+    from {
+        opacity: 0;
+        transform: translateY(38px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes sceneGlow {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.scene-tree {
+    transform-origin: 50% 100%;
+    animation: sceneGlow 800ms ease 600ms both, treeSway 5.5s ease-in-out 800ms infinite;
+}
+
+@keyframes treeSway {
+
+    0%,
+    100% {
+        transform: rotate(-2.5deg);
+    }
+
+    50% {
+        transform: rotate(2.5deg);
+    }
+}
+
+/* Hero load sequence — content settles in above the rising field */
+.landing-eyebrow,
+.landing-title,
+.landing-sub,
+.landing-cta-row {
+    animation: landingFadeUp 700ms ease both;
+}
+
+.landing-title {
+    animation-delay: 120ms;
+}
+
+.landing-sub {
+    animation-delay: 240ms;
+}
+
+.landing-cta-row {
+    animation-delay: 360ms;
+}
+
+@keyframes landingFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.landing-section {
+    padding: 5rem 0;
+}
+
+.landing-section-eyebrow {
+    font-size: .76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    color: var(--harvest-deep);
+    text-align: center;
+}
+
+.landing-section-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    color: var(--soil);
+    text-align: center;
+    margin: .4rem auto 0;
+    max-width: 18ch;
+}
+
+/* How it works — three stops on one route */
+.landing-how {
+    background: var(--paper);
+    border-top: 1px solid var(--stone-200);
+    border-bottom: 1px solid var(--stone-200);
+}
+
+.landing-route {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+/* the dashed "route" line linking the three stops */
+.landing-route::before {
+    content: "";
+    position: absolute;
+    top: 30px;
+    left: 16%;
+    right: 16%;
+    border-top: 2px dashed var(--stone-300);
+    z-index: 0;
+}
+
+.landing .route-stop {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.landing .route-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    background: var(--sprout-soft);
+    border: 2px solid var(--paper);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--stone-200);
+}
+
+.landing .route-stop h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--soil);
+}
+
+.landing .route-stop p {
+    font-size: .92rem;
+    color: var(--soil-soft);
+    margin-top: .4rem;
+    max-width: 30ch;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Why it matters */
+.landing-why {
+    background: var(--morning);
+}
+
+.landing-why-grid {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+.landing-why .landing-section-eyebrow,
+.landing-why .landing-section-title {
+    text-align: left;
+    margin-left: 0;
+    max-width: none;
+}
+
+.landing-why-lead {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--soil-soft);
+    margin-top: 1rem;
+}
+
+.landing-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.landing-stat {
+    background: var(--paper);
+    border: 1px solid var(--stone-200);
+    border-left: 4px solid var(--harvest);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.3rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.landing-stat-num {
+    display: block;
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: var(--harvest-deep);
+    line-height: 1;
+}
+
+.landing-stat-label {
+    display: block;
+    font-size: .9rem;
+    color: var(--soil-soft);
+    margin-top: .35rem;
+}
+
+/* Second CTA band */
+.landing-cta-band {
+    background: var(--pine);
+    border-top: 3px solid var(--harvest);
+    padding: 3.5rem 0;
+}
+
+.landing-cta-band-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.landing-cta-band-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    color: var(--paper);
+    letter-spacing: -.01em;
+}
+
+.landing-cta-band-sub {
+    color: var(--sprout-soft);
+    margin-top: .4rem;
+    font-size: 1rem;
+}
+
+/* CTA on the dark band: starts as gold so it pops against pine */
+.landing-cta-light {
+    background: var(--harvest);
+    color: var(--soil);
+}
+
+.landing-cta-light:hover {
+    color: var(--soil);
+}
+
+/* Footer */
+.landing-footer {
+    background: var(--pine-deep);
+    color: var(--sprout-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: 1.5rem;
+    font-size: .85rem;
+}
+
+.landing-foot-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--paper);
+}
+
+.landing-foot-brand strong {
+    color: var(--harvest);
+}
+
+/* ── Scroll reveals — progressive enhancement.
+   Content is visible by default; only when app.js adds .landing.js-reveal do
+   the .reveal sections start hidden and animate in on scroll. ─────────────── */
+.landing.js-reveal .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity .6s ease, transform .6s ease;
+}
+
+.landing.js-reveal .reveal.in {
+    opacity: 1;
+    transform: none;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+    .landing-why-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .landing-route {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+
+    .landing-route::before {
+        display: none;
+    }
+
+    .landing-cta-band-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .landing-hero {
+        min-height: clamp(620px, 92vh, 800px);
+        padding: 2rem 1.25rem clamp(160px, 26vh, 230px);
+    }
+
+    .landing-title {
+        font-size: 1.85rem;
+    }
+
+    .landing-sub {
+        font-size: 1rem;
+    }
+
+    .landing-ground {
+        height: clamp(150px, 24vh, 220px);
+    }
+
+    .landing-sun {
+        right: 8%;
+        bottom: clamp(128px, 22vh, 200px);
+        width: clamp(120px, 32vw, 200px);
+    }
+
+    .landing-section {
+        padding: 3.5rem 0;
+    }
+
+    .landing-cta-row {
+        flex-direction: column;
+        gap: .85rem;
+    }
+
+    .landing-cta {
+        width: 100%;
+    }
+}
+
+/* ── Reduced motion: calm static fallback (field full, no rise/fade/sweep) ─── */
+@media (prefers-reduced-motion: reduce) {
+
+    .landing-ground *,
+    .landing-sun,
+    .lp-cloud {
+        animation: none !important;
+    }
+
+    /* spread the clouds statically instead of stacking them at the left edge */
+    .lp-cloud.c1 {
+        translate: 14vw 0;
+    }
+
+    .lp-cloud.c2 {
+        translate: 42vw 0;
+    }
+
+    .lp-cloud.c3 {
+        translate: 66vw 0;
+    }
+
+    .lp-cloud.c4 {
+        translate: 84vw 0;
+    }
+
+    .lp-cloud.c5 {
+        translate: 28vw 0;
+    }
+
+    .landing-eyebrow,
+    .landing-title,
+    .landing-sub,
+    .landing-cta-row {
+        animation: none;
+    }
+
+    .landing.js-reveal .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .landing-cta::before {
+        display: none;
+    }
+}
+
+/* =============================================================================
+   SITE-WIDE AMBIENCE — gentle life on empty states (calm, reduced-motion safe)
+   ============================================================================= */
+.empty-state span,
+.no-conv-selected span {
+    display: inline-block;
+    animation: emptyFloat 3.6s ease-in-out infinite;
+}
+
+@keyframes emptyFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-7px);
+    }
+}
+
+/* =============================================================================
+   ABOUT & CONTACT subpages (public) — reuse cards/forms + the dawn-band header
+   ============================================================================= */
+.subpage {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.subpage-lead {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: var(--soil-soft);
+    background:
+        radial-gradient(90% 160% at 100% -40%, rgba(200, 136, 31, .1), transparent 60%),
+        var(--paper);
+}
+
+.subpage-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+}
+
+.subpage-grid .card-sub {
+    font-size: .95rem;
+    line-height: 1.55;
+    color: var(--soil-soft);
+}
+
+.subpage-block p {
+    color: var(--soil-soft);
+    line-height: 1.65;
+    margin-top: .35rem;
+}
+
+/* Closing CTA band */
+.subpage-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1.5rem 1.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(200, 136, 31, .3);
+    background:
+        radial-gradient(70% 160% at 95% -30%, rgba(200, 136, 31, .18), transparent 60%),
+        linear-gradient(110deg, var(--sprout-soft), #f7eedb);
+}
+
+.subpage-cta h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--soil);
+}
+
+/* Contact layout */
+.contact-layout {
+    display: grid;
+    grid-template-columns: 1.4fr .9fr;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.contact-info-card {
+    background:
+        radial-gradient(90% 150% at 100% -30%, rgba(60, 110, 74, .08), transparent 60%),
+        var(--paper);
+}
+
+.contact-info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .55rem 0;
+    border-bottom: 1px solid var(--stone-200);
+    font-size: .92rem;
+}
+
+.contact-info-label {
+    color: var(--ash);
+}
+
+.contact-info-value {
+    font-weight: 600;
+    color: var(--soil);
+}
+
+.contact-info-note {
+    font-size: .9rem;
+    color: var(--soil-soft);
+    line-height: 1.55;
+    margin-top: .85rem;
+}
+
+@media (max-width: 760px) {
+
+    .subpage-grid,
+    .contact-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .subpage-cta {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

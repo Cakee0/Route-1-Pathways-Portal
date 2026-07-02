@@ -10,7 +10,20 @@
  *   - Messaging endpoint is polled every 8 s when the messaging page is open.
  */
 
-const API_BASE = "http://localhost:8000";   // ← update to your deployed API URL
+// Backend API base URL. On localhost we hit the local dev server; on any other
+// host (e.g. GitHub Pages) we hit the deployed AWS backend below.
+// ── Fill in your AWS backend's HTTPS URL once deployed. It MUST be https:// —
+//    GitHub Pages is served over HTTPS and browsers block http:// (mixed content).
+const PROD_API_BASE = "https://YOUR-AWS-BACKEND-URL";   // e.g. https://api.route1app.com
+const API_BASE =
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+        ? "http://localhost:8000"
+        : PROD_API_BASE;
+
+// Google Sign-In: paste your OAuth 2.0 "Web application" client ID here.
+// Must match GOOGLE_CLIENT_ID in the backend .env. Leave blank to hide the
+// "Sign in with Google" buttons entirely.
+const GOOGLE_CLIENT_ID = "398142413341-n6glr5jnmh60li4nmefnh5fdehr3u00p.apps.googleusercontent.com";
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    STATE
@@ -74,7 +87,7 @@ const App = {
         if (this.token && this.user) {
             this._navigateToHomeDashboard();
         } else {
-            this.navigate("login");
+            this.navigate("landing");
         }
     },
 
@@ -92,6 +105,9 @@ const App = {
         this._updateNavActive(page);
 
         const componentMap = {
+            landing: "components/landing.html",
+            about: "components/about.html",
+            contact: "components/contact.html",
             login: "components/login.html",
             farmer_dashboard: "components/farmer_dashboard.html",
             org_dashboard: "components/org_dashboard.html",
@@ -116,6 +132,9 @@ const App = {
 
         // Call page init
         const inits = {
+            landing: () => this.initLanding(),
+            about: () => this.initAbout(),
+            contact: () => this.initContact(),
             login: () => this.initLogin(),
             farmer_dashboard: () => this.initFarmerDashboard(),
             org_dashboard: () => this.initBrowseDashboard("org"),
@@ -153,9 +172,28 @@ const App = {
               <span class="brand-sub">Pathways</span>
             </div>
           </div>
+          <nav class="nav-links">
+            <button class="nav-link" data-page="about">About us</button>
+            <button class="nav-link" data-page="contact">Contact us</button>
+          </nav>
+          <div class="header-spacer"></div>
+          <div class="header-user">
+            <button class="nav-link" id="navLoginBtn">Log in</button>
+            <button class="btn btn-sm" id="navRegisterBtn">Create free account</button>
+          </div>
         </div>`;
             document.getElementById("brandLogo")
+                .addEventListener("click", () => this.navigate("landing"));
+            header.querySelectorAll(".nav-link[data-page]").forEach(btn =>
+                btn.addEventListener("click", () => this.navigate(btn.dataset.page))
+            );
+            document.getElementById("navLoginBtn")
                 .addEventListener("click", () => this.navigate("login"));
+            document.getElementById("navRegisterBtn")
+                .addEventListener("click", async () => {
+                    await this.navigate("login");
+                    document.getElementById("showRegisterTab")?.click();
+                });
             return;
         }
 
@@ -249,6 +287,75 @@ const App = {
     /* ═══════════════════════════════════════════════════════════════════════════
        PAGE: LOGIN
        ═══════════════════════════════════════════════════════════════════════════ */
+    initAbout() {
+        window.scrollTo(0, 0);
+        document.getElementById("aboutCreateBtn")?.addEventListener("click", async () => {
+            await this.navigate("login");
+            document.getElementById("showRegisterTab")?.click();
+        });
+    },
+
+    initContact() {
+        window.scrollTo(0, 0);
+        const form = document.getElementById("contactFormEl");
+        if (!form) return;
+        // Where contact messages go (front-end mailto hand-off; no backend needed)
+        const CONTACT_EMAIL = "vedtheamigo@gmail.com";
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const name = document.getElementById("contactName").value.trim();
+            const email = document.getElementById("contactEmail").value.trim();
+            const message = document.getElementById("contactMessage").value.trim();
+            const errEl = document.getElementById("contactError");
+            const okEl = document.getElementById("contactSuccess");
+            errEl.classList.add("hidden");
+            okEl.classList.add("hidden");
+
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errEl.textContent = "Please enter a valid email so we can reply.";
+                errEl.classList.remove("hidden");
+                return;
+            }
+            if (!message) {
+                errEl.textContent = "Please add a message.";
+                errEl.classList.remove("hidden");
+                return;
+            }
+
+            const subject = encodeURIComponent(`Route 1 Pathways — message from ${name || email}`);
+            const body = encodeURIComponent(`${message}\n\n— ${name || "A visitor"} (${email})`);
+            window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+
+            okEl.classList.remove("hidden");
+            form.reset();
+        });
+    },
+
+    initLanding() {
+        // Both "Create free account" buttons → register tab on the existing login screen
+        const goRegister = async () => {
+            await this.navigate("login");
+            document.getElementById("showRegisterTab")?.click();
+        };
+        document.getElementById("landingCreateBtn")?.addEventListener("click", goRegister);
+        document.getElementById("landingCreateBtn2")?.addEventListener("click", goRegister);
+        // "Log in" → login screen as-is
+        document.getElementById("landingLoginBtn")?.addEventListener("click", () => this.navigate("login"));
+
+        // Scroll-reveal (progressive enhancement; CSS handles reduced-motion)
+        const root = document.querySelector(".landing");
+        const reveals = document.querySelectorAll(".landing .reveal");
+        if (root && reveals.length && "IntersectionObserver" in window) {
+            root.classList.add("js-reveal");
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+                });
+            }, { threshold: 0.15 });
+            reveals.forEach(el => io.observe(el));
+        }
+    },
+
     initLogin() {
         const loginTab = document.getElementById("showLoginTab");
         const registerTab = document.getElementById("showRegisterTab");
@@ -357,6 +464,140 @@ const App = {
                 errEl.classList.remove("hidden");
             }
         });
+
+        // Google sign-in (renders into the login + register panels)
+        this._initGoogleSignIn();
+
+        // Google role-selection step (new Google users only)
+        document.querySelectorAll("input[name='gUserType']").forEach(radio => {
+            radio.addEventListener("change", () => {
+                const isOrg = document.querySelector("input[name='gUserType']:checked")?.value === "organization";
+                document.getElementById("gOrgSubtypeGroup").classList.toggle("hidden", !isOrg);
+            });
+        });
+        document.getElementById("googleCompleteFormEl")?.addEventListener("submit", e => {
+            e.preventDefault();
+            this._submitGoogleRegistration();
+        });
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       GOOGLE SIGN-IN
+       ═══════════════════════════════════════════════════════════════════════════ */
+    _initGoogleSignIn() {
+        if (!GOOGLE_CLIENT_ID) {
+            // Not configured → hide the divider + button so the page looks normal.
+            document.querySelectorAll(".auth-divider, .google-signin")
+                .forEach(el => el.classList.add("hidden"));
+            return;
+        }
+
+        const render = () => {
+            if (!window.google?.accounts?.id) return false;
+            window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: (resp) => this._handleGoogleCredential(resp.credential),
+            });
+            [["googleLoginBtn", "signin_with"], ["googleRegisterBtn", "signup_with"]]
+                .forEach(([id, text]) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = "";
+                        window.google.accounts.id.renderButton(el, {
+                            theme: "outline", size: "large", width: 320,
+                            text, logo_alignment: "center",
+                        });
+                    }
+                });
+            return true;
+        };
+
+        // The GSI script loads async; retry briefly until it's ready.
+        if (!render()) {
+            let tries = 0;
+            const t = setInterval(() => {
+                if (render() || ++tries > 40) clearInterval(t);
+            }, 100);
+        }
+    },
+
+    async _handleGoogleCredential(credential) {
+        if (!credential) return;
+        this._pendingGoogleCredential = credential;
+        try {
+            const data = await this.api("POST", "/auth/google", { credential });
+            if (data.needs_registration) {
+                // New Google user — reveal the role picker.
+                this._showGoogleCompletePanel(data.full_name);
+            } else {
+                await this._loginWithToken(data);
+            }
+        } catch (err) {
+            this.showToast(`Google sign-in failed: ${err.message}`, "error");
+        }
+    },
+
+    _showGoogleCompletePanel(fullName) {
+        document.getElementById("loginPanel")?.classList.add("hidden");
+        document.getElementById("registerPanel")?.classList.add("hidden");
+        const sub = document.getElementById("googleCompleteSub");
+        if (sub && fullName) sub.textContent = `Welcome, ${fullName}! Tell us how you'll use Route 1 Pathways.`;
+        document.getElementById("googleCompletePanel")?.classList.remove("hidden");
+    },
+
+    async _submitGoogleRegistration() {
+        const errEl = document.getElementById("googleCompleteError");
+        errEl.classList.add("hidden");
+
+        const userType = document.querySelector("input[name='gUserType']:checked")?.value;
+        const orgSubtype = document.getElementById("gOrgSubtype").value || null;
+
+        if (!userType) {
+            errEl.textContent = "Please choose an account type.";
+            errEl.classList.remove("hidden");
+            return;
+        }
+        if (userType === "organization" && !orgSubtype) {
+            errEl.textContent = "Please select an organization type.";
+            errEl.classList.remove("hidden");
+            return;
+        }
+        if (!this._pendingGoogleCredential) {
+            errEl.textContent = "Your Google session expired. Please sign in with Google again.";
+            errEl.classList.remove("hidden");
+            return;
+        }
+
+        try {
+            const data = await this.api("POST", "/auth/google/complete", {
+                credential: this._pendingGoogleCredential,
+                user_type: userType,
+                org_subtype: orgSubtype,
+            });
+            await this._loginWithToken(data);
+        } catch (err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove("hidden");
+        }
+    },
+
+    // Persist a token payload, fetch the full profile, then enter the dashboard.
+    async _loginWithToken(data) {
+        this._pendingGoogleCredential = null;
+        this._saveAuth(data.access_token, {
+            id: data.user_id,
+            email: data.email,
+            user_type: data.user_type,
+            org_subtype: data.org_subtype,
+            full_name: null,
+            organization_name: null,
+        });
+        try {
+            const profile = await this.api("GET", "/auth/me");
+            this._saveAuth(data.access_token, profile);
+        } catch { /* keep minimal user if profile fetch fails */ }
+        this._renderNav();
+        this._navigateToHomeDashboard();
     },
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -518,6 +759,8 @@ const App = {
        ═══════════════════════════════════════════════════════════════════════════ */
     initBrowseDashboard(role) {
         const user = this.user;
+        // Expose org sub-type to CSS for the role-plate accent (visual only)
+        document.body.dataset.orgSubtype = (role === "org" && user.org_subtype) ? user.org_subtype : "";
         // Set heading context
         const heading = document.getElementById("browseHeading");
         const subtitle = document.getElementById("browseSubtitle");
