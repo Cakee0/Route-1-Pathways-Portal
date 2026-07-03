@@ -16,6 +16,7 @@ Notification triggers fire after each mutation to alert interested consumers
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -78,8 +79,14 @@ def donate(
 ) -> DonationResponse:
     _require_consumer(current_user)
 
-    # Validate wishlist item
-    item = db.query(WishlistItem).filter(WishlistItem.id == payload.wishlist_item_id).first()
+    # Validate wishlist item — locked so two concurrent donations can't both
+    # read the same amount_donated and lose one update (audit A6)
+    item = (
+        db.query(WishlistItem)
+        .filter(WishlistItem.id == payload.wishlist_item_id)
+        .with_for_update()
+        .first()
+    )
     if not item or item.status != WishlistStatusEnum.open:
         raise HTTPException(status_code=404, detail="Wishlist item not found or not accepting donations.")
 
@@ -152,12 +159,13 @@ def join_group_donation(
 ) -> GroupDonationParticipantResponse:
     _require_consumer(current_user)
 
+    # Locked so concurrent joins can't double-count pledges or double-fire the
+    # funded transition (audit A6). No joinedload here — FOR UPDATE must lock
+    # only the group_donations row; related rows lazy-load as needed.
     gd = (
         db.query(GroupDonation)
-        .options(
-            joinedload(GroupDonation.wishlist_item).joinedload(WishlistItem.farmer_links)
-        )
         .filter(GroupDonation.id == payload.group_donation_id)
+        .with_for_update()
         .first()
     )
     if not gd or gd.status != GroupDonationStatusEnum.open:
@@ -194,7 +202,13 @@ def join_group_donation(
         # Confirm all participant donations & award points
         _confirm_group_donations(db, gd)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # uq_gdp_group_consumer — a concurrent request from the same consumer
+        # won the race past the check above
+        db.rollback()
+        raise HTTPException(status_code=409, detail="You have already joined this group donation.")
     db.refresh(participant)
 
     # Fire group-donation notifications (e.g. "one donor away")
@@ -284,8 +298,15 @@ def _confirm_group_donations(db: Session, gd: GroupDonation) -> None:
     for each participant and award them points.
     """
     item = gd.wishlist_item
+    if not item.farmer_links:
+        # donations.farmer_id is NOT NULL — fail the request cleanly here,
+        # before any money state is committed, instead of 500ing at commit
+        raise HTTPException(
+            status_code=409,
+            detail="This wishlist item has no linked farmer; the organization must fix it before the group can be funded.",
+        )
     # Pick primary farmer (first linked)
-    farmer_id = item.farmer_links[0].farmer_id if item.farmer_links else None
+    farmer_id = item.farmer_links[0].farmer_id
 
     for participant in gd.participants:
         if participant.donation_id:

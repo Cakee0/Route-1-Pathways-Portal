@@ -273,6 +273,18 @@ def update_wishlist_item(
         setattr(item, field, value)
 
     if farmer_ids is not None:
+        # Verify all farmer IDs exist and are farmers (same rule as create)
+        farmers = (
+            db.query(User)
+            .filter(User.id.in_(farmer_ids), User.user_type == UserTypeEnum.farmer)
+            .all()
+        )
+        if len(farmers) != len(set(farmer_ids)):
+            raise HTTPException(
+                status_code=422,
+                detail="One or more farmer_ids are invalid or do not belong to farmer accounts.",
+            )
+
         # Replace farmer links
         db.query(WishlistFarmerLink).filter(
             WishlistFarmerLink.wishlist_item_id == item_id

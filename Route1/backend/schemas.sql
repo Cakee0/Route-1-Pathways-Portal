@@ -192,6 +192,19 @@ UPDATE `wishlist_items`
 ALTER TABLE `wishlist_items`
     MODIFY COLUMN `quantity_needed` DECIMAL(10,2) NOT NULL;
 
+-- v4: one pledge per consumer per group donation. Dedupe first (keep the
+-- earliest row) so the ADD UNIQUE KEY can never fail on existing data; the
+-- DELETE is a no-op on every later run and the 1061 duplicate-key-name error
+-- from the re-run ALTER is ignored by database.py.
+DELETE gdp_dup FROM `group_donation_participants` gdp_dup
+    INNER JOIN `group_donation_participants` gdp_keep
+        ON  gdp_dup.group_donation_id = gdp_keep.group_donation_id
+        AND gdp_dup.consumer_id       = gdp_keep.consumer_id
+        AND gdp_dup.id                > gdp_keep.id;
+
+ALTER TABLE `group_donation_participants`
+    ADD UNIQUE KEY `uq_gdp_group_consumer` (`group_donation_id`, `consumer_id`);
+
 -- =============================================================================
 -- Future tables (stubs for reference — not created yet)
 -- =============================================================================

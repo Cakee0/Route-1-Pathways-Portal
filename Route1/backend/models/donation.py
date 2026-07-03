@@ -14,7 +14,10 @@ Points rule: every $20 donated → 100 points (see models/points.py).
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Text, Numeric, DateTime, ForeignKey, Enum
+from sqlalchemy import (
+    Column, Integer, String, Text, Numeric, DateTime, ForeignKey, Enum,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -150,7 +153,10 @@ class GroupDonationParticipant(Base):
     Created when a consumer clicks "Join Group Donation".
     """
     __tablename__  = "group_donation_participants"
-    __table_args__ = _MYSQL_ARGS
+    __table_args__ = (
+        UniqueConstraint("group_donation_id", "consumer_id", name="uq_gdp_group_consumer"),
+        _MYSQL_ARGS,
+    )
 
     id                = Column(Integer,       primary_key=True, index=True)
     group_donation_id = Column(Integer,       ForeignKey("group_donations.id"), nullable=False, index=True)
