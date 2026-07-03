@@ -9,10 +9,12 @@ Group Donation flow:
   GET  /donations/group/{gd_id}  — fetch group donation status
   GET  /donations/mine           — consumer's donation history
 
-Notification triggers fire after each mutation to alert interested consumers
-(see _fire_notifications helper at the bottom of this file).
+Notification triggers (utils/notify.py) alert opted-in consumers by email:
+group-progress notifications fire here on join; new-opportunity
+notifications fire on wishlist item creation (routers/wishlist.py).
 """
 
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -26,13 +28,15 @@ from models import (
     Donation, DonationStatusEnum,
     GroupDonation, GroupDonationStatusEnum, GroupDonationParticipant,
     PointsLedger, calculate_points,
-    NotificationPreferences,
 )
 from routers.auth import get_current_user
 from schemas import (
     DonateRequest, DonationResponse,
     JoinGroupDonationRequest, GroupDonationParticipantResponse, GroupDonationResponse,
 )
+from utils.notify import notify_group_progress
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/donations", tags=["Donations"])
 
@@ -126,12 +130,6 @@ def donate(
     db.commit()
     db.refresh(donation)
 
-    # Fire notifications (non-blocking — log errors, don't break the response)
-    try:
-        _fire_donation_notifications(db, item)
-    except Exception:
-        pass
-
     return DonationResponse(
         id=donation.id,
         consumer_id=donation.consumer_id,
@@ -211,11 +209,12 @@ def join_group_donation(
         raise HTTPException(status_code=409, detail="You have already joined this group donation.")
     db.refresh(participant)
 
-    # Fire group-donation notifications (e.g. "one donor away")
+    # Fire group-donation notifications (e.g. "one donor away") — must never
+    # break the response
     try:
-        _fire_group_notifications(db, gd)
+        notify_group_progress(db, gd)
     except Exception:
-        pass
+        logger.exception("group-donation notification failure")
 
     return GroupDonationParticipantResponse(
         id=participant.id,
@@ -325,60 +324,3 @@ def _confirm_group_donations(db: Session, gd: GroupDonation) -> None:
 
         participant.donation_id = donation.id
         _award_points(db, donation)
-
-
-def _fire_donation_notifications(db: Session, item: WishlistItem) -> None:
-    """
-    Notify consumers whose donation price range matches this item's cost.
-    In production this would enqueue emails/push notifications; here we log.
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-
-    amount = float(item.total_amount_required)
-    prefs = (
-        db.query(NotificationPreferences)
-        .filter(
-            NotificationPreferences.donation_notifications_enabled == True,  # noqa: E712
-        )
-        .all()
-    )
-    for pref in prefs:
-        lo = float(pref.donation_min_price) if pref.donation_min_price else 0
-        hi = float(pref.donation_max_price) if pref.donation_max_price else float("inf")
-        if lo <= amount <= hi:
-            logger.info(
-                "NOTIFICATION → user_id=%s: New donation opportunity '%s' for $%.2f",
-                pref.user_id, item.crop_name, amount,
-            )
-
-
-def _fire_group_notifications(db: Session, gd: GroupDonation) -> None:
-    """
-    Notify consumers subscribed to group donation alerts:
-    - When a group donation opens (donors_count == 1 — just started)
-    - When only 1 more donor is needed
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-
-    prefs = (
-        db.query(NotificationPreferences)
-        .filter(
-            NotificationPreferences.group_donation_notifications_enabled == True,  # noqa: E712
-        )
-        .all()
-    )
-    remaining = max(0, gd.donors_needed - gd.donors_count)
-
-    for pref in prefs:
-        if gd.donors_count == 1:
-            logger.info(
-                "NOTIFICATION → user_id=%s: New group donation opened for wishlist item %s",
-                pref.user_id, gd.wishlist_item_id,
-            )
-        if remaining == 1:
-            logger.info(
-                "NOTIFICATION → user_id=%s: Group donation %s needs just 1 more donor!",
-                pref.user_id, gd.id,
-            )

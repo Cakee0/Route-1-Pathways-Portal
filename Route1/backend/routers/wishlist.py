@@ -13,6 +13,7 @@ PATCH  /wishlist/{item_id}      — org updates its own item
 DELETE /wishlist/{item_id}      — org soft-cancels its item
 """
 
+import logging
 from datetime import datetime
 from typing import List, Optional
 
@@ -30,6 +31,9 @@ from schemas import (
     FulfillmentCreate, FulfillmentResponse,
 )
 from schemas.wishlist import FarmerSummary, GroupDonationSummary
+from utils.notify import notify_new_opportunity
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wishlist", tags=["Wishlist"])
 
@@ -166,7 +170,16 @@ def create_wishlist_item(
         db.add(gd)
 
     db.commit()
-    return _build_response(_load_item(db, item.id))
+    created = _load_item(db, item.id)
+
+    # Email opted-in consumers whose price range matches — must never break
+    # item creation
+    try:
+        notify_new_opportunity(db, created)
+    except Exception:
+        logger.exception("new-opportunity notification failure")
+
+    return _build_response(created)
 
 
 # ── GET /wishlist/ — marketplace feed ────────────────────────────────────────

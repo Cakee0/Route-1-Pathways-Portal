@@ -132,6 +132,7 @@ const App = {
         try {
             const html = await fetch(htmlPath + "?v=20260331", { cache: "no-store" }).then(r => r.text());
             document.getElementById("app").innerHTML = html;
+            this._track("/" + page);
         } catch (e) {
             document.getElementById("app").innerHTML =
                 `<div class="main-content"><p class="error-msg">Failed to load page: ${e.message}</p></div>`;
@@ -283,6 +284,17 @@ const App = {
     /* ═══════════════════════════════════════════════════════════════════════════
        TOAST
        ═══════════════════════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════════════════════
+       ANALYTICS (GoatCounter — see index.html; no-op if blocked or not loaded)
+       ═══════════════════════════════════════════════════════════════════════════ */
+    _track(path, isEvent = false) {
+        try {
+            if (window.goatcounter && window.goatcounter.count) {
+                window.goatcounter.count({ path, event: isEvent });
+            }
+        } catch { /* analytics must never break the app */ }
+    },
+
     showToast(msg, type = "success") {
         const el = document.getElementById("toast");
         if (!el) return;
@@ -1261,6 +1273,7 @@ const App = {
                 amount,
             });
             document.getElementById("donateModal").classList.add("hidden");
+            this._track("donation-completed", true);
             this.showToast(
                 `Donation confirmed! You earned ${result.points_earned} points 🎯`,
                 "success"
@@ -1317,6 +1330,7 @@ const App = {
                 amount,
             });
             document.getElementById("groupDonateModal").classList.add("hidden");
+            this._track("group-pledge", true);
             this.showToast("You joined the group donation! Points will be awarded when fully funded. 🎯", "success");
             this._loadDonationOpportunities();
         } catch (err) {

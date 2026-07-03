@@ -46,8 +46,15 @@
   <!-- ── Toast notification ─────────────────────────────────────────────── -->
   <div id="toast" class="toast-hide" role="alert" aria-live="polite"></div>
 
+  <!-- ── Analytics (GoatCounter — privacy-friendly, no cookies) ────────────
+       no_onload: this is an SPA, so pageviews are counted manually in
+       App.navigate() / App._track() instead of once per full page load. -->
+  <script>window.goatcounter = { no_onload: true };</script>
+  <script data-goatcounter="https://route1pathways.goatcounter.com/count"
+          async src="https://gc.zgo.at/count.js"></script>
+
   <!-- ── SPA logic ──────────────────────────────────────────────────────── -->
-  <script src="app.js?v=20260705"></script>
+  <script src="app.js?v=20260706"></script>
 </body>
 
 </html>
