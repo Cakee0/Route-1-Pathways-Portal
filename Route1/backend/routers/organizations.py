@@ -10,7 +10,7 @@ The shared _browse_farmers_impl() helper is re-used by consumers.py.
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 from models import FarmerCropInventory, User, UserTypeEnum
@@ -60,8 +60,12 @@ def _browse_farmers_impl(
     Build and execute a crop inventory query with optional filters,
     then group results by farmer and return FarmerListingResponse objects.
     """
-    crop_q = db.query(FarmerCropInventory).filter(
-        FarmerCropInventory.is_available == True  # noqa: E712
+    # joinedload avoids a lazy-load query per farmer below (browse is the
+    # hottest endpoint — this was a 1+N pattern)
+    crop_q = (
+        db.query(FarmerCropInventory)
+        .options(joinedload(FarmerCropInventory.farmer))
+        .filter(FarmerCropInventory.is_available == True)  # noqa: E712
     )
 
     if crop_type:

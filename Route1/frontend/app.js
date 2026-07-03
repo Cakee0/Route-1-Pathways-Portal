@@ -60,6 +60,14 @@ const App = {
         if (body) opts.body = JSON.stringify(body);
 
         const res = await fetch(`${API_BASE}${path}`, opts);
+        if (res.status === 401 && this.token) {
+            // JWT expired (60-min lifetime, no refresh) — same steps as logout()
+            this._clearAuth();
+            this._renderNav();
+            this.navigate("login");
+            this.showToast("Your session expired — please log in again.", "error");
+            throw new Error("Session expired.");
+        }
         if (res.status === 204) return null;
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
