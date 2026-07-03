@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import models  # noqa: F401 — side-effect import; registers ORM metadata
 
 from database import create_tables
+from utils.ratelimit import RateLimitMiddleware
 from routers import auth, farmers, organizations, consumers, messaging
 from routers.profiles import router as profiles_router
 from routers.wishlist import router as wishlist_router
@@ -42,6 +43,12 @@ app = FastAPI(
     contact={"name": "Route 1 Team", "email": "support@route1app.com"},
     license_info={"name": "MIT"},
 )
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+# Per-IP limits on the brute-forceable endpoints (see utils/ratelimit.py).
+# Must be added BEFORE CORSMiddleware: the last-added middleware is outermost,
+# and CORS must wrap the limiter so 429 responses carry CORS headers.
+app.add_middleware(RateLimitMiddleware)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # Browser origins allowed to call the API. Set ALLOWED_ORIGINS in the environment
