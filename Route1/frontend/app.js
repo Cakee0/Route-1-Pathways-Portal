@@ -92,17 +92,53 @@ const App = {
        ═══════════════════════════════════════════════════════════════════════════ */
     init() {
         this._renderNav();
-        if (this.token && this.user) {
-            this._navigateToHomeDashboard();
-        } else {
-            this.navigate("landing");
-        }
+        window.addEventListener("hashchange", () => {
+            if (location.hash === this._lastAppliedHash) return; // set by navigate(); already applied
+            this._routeFromHash();
+        });
+        this._routeFromHash();
     },
 
     /* ═══════════════════════════════════════════════════════════════════════════
        NAVIGATION
+       Hash routing: every view has a URL (#/, #/login, #/register, …) so the
+       browser Back button works and pages can be linked/bookmarked.
        ═══════════════════════════════════════════════════════════════════════════ */
-    async navigate(page) {
+    _hashFor(page, register = false) {
+        if (register) return "#/register";
+        const map = {
+            landing: "#/",
+            about: "#/about",
+            contact: "#/contact",
+            login: "#/login",
+            farmer_dashboard: "#/dashboard",
+            org_dashboard: "#/dashboard",
+            consumer_dashboard: "#/dashboard",
+            messaging: "#/messages",
+            profile_settings: "#/profile",
+            points_rewards: "#/points",
+            wishlist_manage: "#/wishlist",
+        };
+        return map[page] || "#/";
+    },
+
+    _routeFromHash() {
+        const h = location.hash || "#/";
+        const loggedIn = !!(this.token && this.user);
+
+        if (h === "#/login") return loggedIn ? this._navigateToHomeDashboard() : this.navigate("login");
+        if (h === "#/register") return loggedIn ? this._navigateToHomeDashboard() : this.navigate("login", { register: true });
+        if (h === "#/about") return this.navigate("about");
+        if (h === "#/contact") return this.navigate("contact");
+        if (h === "#/messages") return loggedIn ? this.navigate("messaging") : this.navigate("login");
+        if (h === "#/profile") return loggedIn ? this.navigate("profile_settings") : this.navigate("login");
+        if (h === "#/points") return loggedIn ? this.navigate("points_rewards") : this.navigate("login");
+        if (h === "#/wishlist") return loggedIn ? this.navigate("wishlist_manage") : this.navigate("login");
+        // "#/", "#/dashboard", and anything unrecognized → home
+        return loggedIn ? this._navigateToHomeDashboard() : this.navigate("landing");
+    },
+
+    async navigate(page, opts = {}) {
         // Stop any active messaging poll
         if (this.messagingPollTimer) {
             clearInterval(this.messagingPollTimer);
@@ -129,15 +165,52 @@ const App = {
         const htmlPath = componentMap[page];
         if (!htmlPath) { console.error("Unknown page:", page); return; }
 
+        const appEl = document.getElementById("app");
         try {
-            const html = await fetch(htmlPath + "?v=20260331", { cache: "no-store" }).then(r => r.text());
-            document.getElementById("app").innerHTML = html;
+            const res = await fetch(htmlPath + "?v=20260707", { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            appEl.innerHTML = await res.text();
+            appEl.classList.toggle("is-landing", page === "landing");
             this._track("/" + page);
         } catch (e) {
-            document.getElementById("app").innerHTML =
-                `<div class="main-content"><p class="error-msg">Failed to load page: ${e.message}</p></div>`;
+            appEl.classList.remove("is-landing");
+            appEl.innerHTML = `
+        <div class="load-error">
+          <h2>We couldn't load that page</h2>
+          <p>It's probably a connection hiccup — check your internet and try again.</p>
+          <div class="load-error-actions">
+            <button class="btn btn-primary" id="loadRetryBtn">Try again</button>
+            <button class="btn btn-secondary" id="loadHomeBtn">Go to home</button>
+          </div>
+        </div>`;
+            document.getElementById("loadRetryBtn")
+                ?.addEventListener("click", () => this.navigate(page, opts));
+            document.getElementById("loadHomeBtn")
+                ?.addEventListener("click", () =>
+                    (this.token && this.user) ? this._navigateToHomeDashboard() : this.navigate("landing"));
             return;
         }
+
+        // Per-view title + URL (history entry) so Back/bookmarks/sharing work
+        const titles = {
+            landing: "Route 1 Pathways — Minnesota Food Rescue Marketplace",
+            about: "About us — Route 1 Pathways",
+            contact: "Contact us — Route 1 Pathways",
+            login: "Log in — Route 1 Pathways",
+            farmer_dashboard: "Farmer dashboard — Route 1 Pathways",
+            org_dashboard: "Browse & wishlist — Route 1 Pathways",
+            consumer_dashboard: "Browse farms — Route 1 Pathways",
+            messaging: "Messages — Route 1 Pathways",
+            profile_settings: "Profile settings — Route 1 Pathways",
+            points_rewards: "My points — Route 1 Pathways",
+            wishlist_manage: "Wishlist — Route 1 Pathways",
+        };
+        document.title = opts.register
+            ? "Create your free account — Route 1 Pathways"
+            : (titles[page] || "Route 1 Pathways");
+        const targetHash = this._hashFor(page, !!opts.register);
+        this._lastAppliedHash = targetHash;
+        if (location.hash !== targetHash) location.hash = targetHash;
 
         // Call page init
         const inits = {
@@ -154,6 +227,19 @@ const App = {
             wishlist_manage: () => this.initWishlistManage(),
         };
         inits[page]?.();
+
+        // Deep-linked register (#/register): open the Create Account tab, and say
+        // so if the tab isn't there instead of silently landing on the login form.
+        if (opts.register && page === "login") {
+            const tab = document.getElementById("showRegisterTab");
+            if (tab) tab.click();
+            else this.showToast('Use the "Create Account" tab above to sign up.', "error");
+        }
+    },
+
+    // Every "create account" entry point funnels through here
+    openRegister() {
+        return this.navigate("login", { register: true });
     },
 
     _navigateToHomeDashboard() {
@@ -199,10 +285,7 @@ const App = {
             document.getElementById("navLoginBtn")
                 .addEventListener("click", () => this.navigate("login"));
             document.getElementById("navRegisterBtn")
-                .addEventListener("click", async () => {
-                    await this.navigate("login");
-                    document.getElementById("showRegisterTab")?.click();
-                });
+                .addEventListener("click", () => this.openRegister());
             return;
         }
 
@@ -309,10 +392,8 @@ const App = {
        ═══════════════════════════════════════════════════════════════════════════ */
     initAbout() {
         window.scrollTo(0, 0);
-        document.getElementById("aboutCreateBtn")?.addEventListener("click", async () => {
-            await this.navigate("login");
-            document.getElementById("showRegisterTab")?.click();
-        });
+        document.getElementById("aboutCreateBtn")
+            ?.addEventListener("click", () => this.openRegister());
     },
 
     initContact() {
@@ -352,15 +433,7 @@ const App = {
     },
 
     initLanding() {
-        // Both "Create free account" buttons → register tab on the existing login screen
-        const goRegister = async () => {
-            await this.navigate("login");
-            document.getElementById("showRegisterTab")?.click();
-        };
-        document.getElementById("landingCreateBtn")?.addEventListener("click", goRegister);
-        document.getElementById("landingCreateBtn2")?.addEventListener("click", goRegister);
-        // "Log in" → login screen as-is
-        document.getElementById("landingLoginBtn")?.addEventListener("click", () => this.navigate("login"));
+        // CTAs are real links (#/register, #/login) — hash routing handles them.
 
         // Scroll-reveal (progressive enhancement; CSS handles reduced-motion)
         const root = document.querySelector(".landing");

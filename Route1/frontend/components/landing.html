@@ -18,17 +18,18 @@
         <div class="landing-hero-inner">
             <p class="landing-eyebrow">Minnesota food rescue marketplace</p>
             <h1 class="landing-title">
-                Good food shouldn't go to waste.<br>
-                Let's get the surplus harvest to neighbors who need it.
+                Good food shouldn't go to waste.
             </h1>
             <p class="landing-sub">
-                Route 1 Pathways connects local farmers, food shelves, and neighbors
-                so surplus crops feed people — not landfills.
+                Route 1 Pathways gets the surplus harvest to neighbors who need it —
+                connecting local farmers, food shelves, and neighbors so crops feed
+                people, not landfills.
             </p>
             <div class="landing-cta-row">
-                <button class="btn btn-primary landing-cta" id="landingCreateBtn">Create your free account</button>
-                <button class="landing-login-link" id="landingLoginBtn">Log in</button>
+                <a class="btn btn-primary landing-cta" href="#/register" id="landingCreateBtn">Create your free account</a>
+                <a class="landing-login-link" href="#/login" id="landingLoginBtn">Log in</a>
             </div>
+            <p class="landing-cta-note">Free for farmers, food shelves, and neighbors. No card required.</p>
         </div>
 
         <!-- Ground: hills, barn, tree & field — a band along the bottom, in front of
@@ -81,21 +82,22 @@
 
             <div class="landing-route">
                 <div class="route-stop">
-                    <div class="route-icon">🌱</div>
+                    <div class="route-icon" aria-hidden="true">🌱</div>
                     <h3>Farmers list what they grow</h3>
                     <p>Post your crops, set a price or mark them donation-ready, and say whether you can help
                         with transport.</p>
                 </div>
                 <div class="route-stop">
-                    <div class="route-icon">🥫</div>
+                    <div class="route-icon" aria-hidden="true">🥫</div>
                     <h3>Organizations open opportunities</h3>
                     <p>Food shelves, grocers, and restaurants turn surplus into donation opportunities neighbors
                         can fund.</p>
                 </div>
                 <div class="route-stop">
-                    <div class="route-icon">🤝</div>
+                    <div class="route-icon" aria-hidden="true">🤝</div>
                     <h3>Neighbors fund the harvest</h3>
-                    <p>Chip in on a crop — on your own or together with others — and earn rewards as you give.</p>
+                    <p>Chip in on a crop — on your own or together with others — and earn reward points for
+                        every donation you help fund.</p>
                 </div>
             </div>
         </div>
@@ -117,19 +119,36 @@
                     who needs it.
                 </p>
             </div>
-            <div class="landing-stats">
-                <div class="landing-stat">
-                    <span class="landing-stat-num num">~⅓</span>
-                    <span class="landing-stat-label">of the food grown in the U.S. goes uneaten</span>
+            <div class="landing-impact">
+                <!-- The hardship facts: plain ink, no gold — gold is reserved for value -->
+                <div class="impact-fact">
+                    <span class="impact-num num">1 in 3</span>
+                    <span class="impact-label">pounds of the U.S. food supply is never eaten</span>
                 </div>
-                <div class="landing-stat">
-                    <span class="landing-stat-num num">40M+</span>
-                    <span class="landing-stat-label">people in the U.S. face food insecurity</span>
+                <div class="impact-fact">
+                    <span class="impact-num num">40M+</span>
+                    <span class="impact-label">people in the U.S. face food insecurity</span>
                 </div>
-                <div class="landing-stat">
-                    <span class="landing-stat-num num">100%</span>
-                    <span class="landing-stat-label">of what's rescued here goes to a Minnesota community</span>
+
+                <!-- The harvest fill: a crate that fills with gold — the one number
+                     that wears the value color, because it IS the rescued value -->
+                <div class="impact-vessel" role="img"
+                    aria-label="A crate filled to the top: 100% of what's rescued on Route 1 goes to a Minnesota community.">
+                    <div class="impact-vessel-fill" aria-hidden="true"></div>
+                    <div class="impact-vessel-copy" aria-hidden="true">
+                        <span class="impact-vessel-num num">100%</span>
+                        <span class="impact-vessel-label">of what's rescued here goes to a Minnesota
+                            community</span>
+                    </div>
                 </div>
+
+                <p class="impact-sources">
+                    Sources:
+                    <a href="https://www.usda.gov/about-food/food-safety/food-loss-and-waste" target="_blank"
+                        rel="noopener">USDA</a> ·
+                    <a href="https://www.feedingamerica.org/hunger-in-america" target="_blank"
+                        rel="noopener">Feeding America</a>
+                </p>
             </div>
         </div>
     </section>
@@ -152,6 +171,11 @@
     <!-- ══ FOOTER ══════════════════════════════════════════════════════════════ -->
     <footer class="landing-footer">
         <span class="landing-foot-brand">Route <strong>1</strong> Pathways</span>
+        <nav class="landing-foot-links" aria-label="Footer">
+            <a href="#/about">About us</a>
+            <a href="#/contact">Contact</a>
+            <a href="#/login">Log in</a>
+        </nav>
         <span class="landing-foot-tag">A Minnesota food rescue marketplace</span>
     </footer>
 
