@@ -1,0 +1,6 @@
+{
+  "files": ["Route1/frontend/index.html"],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}
