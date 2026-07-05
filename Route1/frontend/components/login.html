@@ -20,9 +20,11 @@
         </div>
 
         <!-- Tab toggle -->
-        <div class="auth-tabs">
-            <button class="auth-tab active" id="showLoginTab">Sign In</button>
-            <button class="auth-tab" id="showRegisterTab">Create Account</button>
+        <div class="auth-tabs" role="tablist" aria-label="Sign in or create account">
+            <button class="auth-tab active" id="showLoginTab" role="tab" aria-selected="true"
+                aria-controls="loginPanel">Sign In</button>
+            <button class="auth-tab" id="showRegisterTab" role="tab" aria-selected="false"
+                aria-controls="registerPanel">Create Account</button>
         </div>
 
         <!-- ── LOGIN PANEL ──────────────────────────────────────────────────── -->
@@ -39,7 +41,7 @@
                     <label for="loginPassword">Password</label>
                     <input type="password" id="loginPassword" placeholder="••••••••" required />
                 </div>
-                <p class="error-msg hidden" id="loginError"></p>
+                <p class="error-msg hidden" role="alert" id="loginError"></p>
                 <button type="submit" class="btn btn-primary btn-block">Sign In</button>
             </form>
 
@@ -136,7 +138,7 @@
                     <input type="password" id="regPassword" placeholder="Min. 8 characters" minlength="8" maxlength="72" required />
                 </div>
 
-                <p class="error-msg hidden" id="registerError"></p>
+                <p class="error-msg hidden" role="alert" id="registerError"></p>
                 <button type="submit" class="btn btn-primary btn-block">Create Account</button>
             </form>
 
@@ -187,7 +189,7 @@
 
                 <p class="sub-text">You can add your farm/organization name, location, and phone anytime from Profile Settings.</p>
 
-                <p class="error-msg hidden" id="googleCompleteError"></p>
+                <p class="error-msg hidden" role="alert" id="googleCompleteError"></p>
                 <button type="submit" class="btn btn-primary btn-block">Continue</button>
             </form>
         </div>

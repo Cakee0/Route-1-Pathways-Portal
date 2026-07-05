@@ -42,8 +42,8 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="cropPrice">Price per Unit ($)</label>
-                    <input type="number" id="cropPrice" placeholder="Leave blank = price on request" step="0.01"
-                        min="0" />
+                    <input type="number" id="cropPrice" step="0.01" min="0" aria-describedby="cropPriceHint" />
+                    <p class="sub-text" id="cropPriceHint">Leave blank to show "price on request"</p>
                 </div>
                 <div class="form-group">
                     <label for="cropDesc">Description (optional)</label>
@@ -67,7 +67,7 @@
                 </label>
             </div>
 
-            <p class="error-msg hidden" id="addCropError"></p>
+            <p class="error-msg hidden" role="alert" id="addCropError"></p>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save Listing</button>
                 <button type="button" class="btn btn-ghost" id="cancelAddCropBtn">Cancel</button>
@@ -163,7 +163,7 @@
                     <span>Available</span>
                 </label>
             </div>
-            <p class="error-msg hidden" id="editCropError"></p>
+            <p class="error-msg hidden" role="alert" id="editCropError"></p>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Save Changes</button>
                 <button type="button" class="btn btn-ghost" id="closeEditModal">Cancel</button>

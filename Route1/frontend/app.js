@@ -167,7 +167,9 @@ const App = {
 
         const appEl = document.getElementById("app");
         try {
-            const res = await fetch(htmlPath + "?v=20260707", { cache: "no-store" });
+            // Versioned URL does the cache-busting; letting the HTTP cache work
+            // makes repeat navigations instant (was cache: "no-store")
+            const res = await fetch(htmlPath + "?v=20260708");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -240,6 +242,56 @@ const App = {
     // Every "create account" entry point funnels through here
     openRegister() {
         return this.navigate("login", { register: true });
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       ACCESSIBLE MODALS
+       One open/close pair for every overlay: dialog semantics, Esc to close,
+       focus moved in on open and returned on close, Tab kept inside.
+       ═══════════════════════════════════════════════════════════════════════════ */
+    _openModal(id) {
+        const overlay = document.getElementById(id);
+        if (!overlay) return;
+        if (this._modalKeyHandler) {
+            document.removeEventListener("keydown", this._modalKeyHandler);
+            this._modalKeyHandler = null;
+        }
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        const heading = overlay.querySelector("h1, h2, h3");
+        if (heading) {
+            if (!heading.id) heading.id = `${id}Title`;
+            overlay.setAttribute("aria-labelledby", heading.id);
+        }
+        overlay.classList.remove("hidden");
+
+        this._modalReturnFocus = document.activeElement;
+        this._modalKeyHandler = (e) => {
+            if (e.key === "Escape") { e.preventDefault(); this._closeModal(id); return; }
+            if (e.key !== "Tab") return;
+            const focusables = [...overlay.querySelectorAll(
+                'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])'
+            )].filter(el => !el.disabled && el.offsetParent);
+            if (!focusables.length) return;
+            const first = focusables[0], last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
+        document.addEventListener("keydown", this._modalKeyHandler);
+
+        const target = overlay.querySelector('input:not([type="hidden"]), select, textarea, button');
+        target?.focus();
+    },
+
+    _closeModal(id) {
+        const overlay = document.getElementById(id);
+        if (overlay) overlay.classList.add("hidden");
+        if (this._modalKeyHandler) {
+            document.removeEventListener("keydown", this._modalKeyHandler);
+            this._modalKeyHandler = null;
+        }
+        this._modalReturnFocus?.focus?.();
+        this._modalReturnFocus = null;
     },
 
     _navigateToHomeDashboard() {
@@ -455,18 +507,16 @@ const App = {
         const loginPanel = document.getElementById("loginPanel");
         const regPanel = document.getElementById("registerPanel");
 
-        loginTab.addEventListener("click", () => {
-            loginTab.classList.add("active");
-            registerTab.classList.remove("active");
-            loginPanel.classList.remove("hidden");
-            regPanel.classList.add("hidden");
-        });
-        registerTab.addEventListener("click", () => {
-            registerTab.classList.add("active");
-            loginTab.classList.remove("active");
-            regPanel.classList.remove("hidden");
-            loginPanel.classList.add("hidden");
-        });
+        const selectTab = (on, off, showPanel, hidePanel) => {
+            on.classList.add("active");
+            off.classList.remove("active");
+            on.setAttribute("aria-selected", "true");
+            off.setAttribute("aria-selected", "false");
+            showPanel.classList.remove("hidden");
+            hidePanel.classList.add("hidden");
+        };
+        loginTab.addEventListener("click", () => selectTab(loginTab, registerTab, loginPanel, regPanel));
+        registerTab.addEventListener("click", () => selectTab(registerTab, loginTab, regPanel, loginPanel));
 
         // Login form
         document.getElementById("loginFormEl").addEventListener("submit", async e => {
@@ -748,7 +798,7 @@ const App = {
         // Edit modal close
         document.getElementById("closeEditModal")
             .addEventListener("click", () =>
-                document.getElementById("editCropModal").classList.add("hidden")
+                this._closeModal("editCropModal")
             );
 
         // Edit modal submit
@@ -772,7 +822,7 @@ const App = {
             try {
                 await this.api("PUT", `/farmers/crops/${cropId}`, payload);
                 this.showToast("Listing updated!", "success");
-                document.getElementById("editCropModal").classList.add("hidden");
+                this._closeModal("editCropModal");
                 this._loadMyCrops();
             } catch (err) {
                 errEl.textContent = err.message;
@@ -839,7 +889,7 @@ const App = {
         document.getElementById("editNeedTransport").checked = crop.needs_transport;
         document.getElementById("editDonationEligible").checked = crop.donation_eligible;
         document.getElementById("editIsAvailable").checked = crop.is_available;
-        document.getElementById("editCropModal").classList.remove("hidden");
+        this._openModal("editCropModal");
     },
 
     async _deleteCrop(cropId) {
@@ -1177,10 +1227,10 @@ const App = {
 
         // Donate Now modal — close
         document.getElementById("closeDonateModal")
-            .addEventListener("click", () => document.getElementById("donateModal").classList.add("hidden"));
+            .addEventListener("click", () => this._closeModal("donateModal"));
         // Group Donate modal — close
         document.getElementById("closeGroupDonateModal")
-            .addEventListener("click", () => document.getElementById("groupDonateModal").classList.add("hidden"));
+            .addEventListener("click", () => this._closeModal("groupDonateModal"));
     },
 
     async _loadDonationOpportunities() {
@@ -1315,7 +1365,7 @@ const App = {
 
             document.getElementById("donateAmount").value = "";
             document.getElementById("donateError").classList.add("hidden");
-            document.getElementById("donateModal").classList.remove("hidden");
+            this._openModal("donateModal");
 
             // Wire confirm button (replace to avoid duplicate listeners)
             const btn = document.getElementById("confirmDonateBtn");
@@ -1345,7 +1395,7 @@ const App = {
                 farmer_id: farmerId,
                 amount,
             });
-            document.getElementById("donateModal").classList.add("hidden");
+            this._closeModal("donateModal");
             this._track("donation-completed", true);
             this.showToast(
                 `Donation confirmed! You earned ${result.points_earned} points 🎯`,
@@ -1378,7 +1428,7 @@ const App = {
 
         document.getElementById("groupDonateAmount").value = "";
         document.getElementById("groupDonateError").classList.add("hidden");
-        document.getElementById("groupDonateModal").classList.remove("hidden");
+        this._openModal("groupDonateModal");
 
         const btn = document.getElementById("confirmGroupDonateBtn");
         const newBtn = btn.cloneNode(true);
@@ -1402,7 +1452,7 @@ const App = {
                 group_donation_id: gdId,
                 amount,
             });
-            document.getElementById("groupDonateModal").classList.add("hidden");
+            this._closeModal("groupDonateModal");
             this._track("group-pledge", true);
             this.showToast("You joined the group donation! Points will be awarded when fully funded. 🎯", "success");
             this._loadDonationOpportunities();
@@ -1664,7 +1714,7 @@ const App = {
         // Modal close
         document.getElementById("closeWishlistDetailModal")
             .addEventListener("click", () =>
-                document.getElementById("wishlistDetailModal").classList.add("hidden")
+                this._closeModal("wishlistDetailModal")
             );
 
         // Load existing items
@@ -1937,7 +1987,7 @@ const App = {
                     pounds_delivered: pounds,
                     notes: content.querySelector("#fulfillNotes").value.trim() || null,
                 });
-                modal.classList.add("hidden");
+                this._closeModal("wishlistDetailModal");
                 this.showToast(`Recorded ${pounds} lbs delivered. Thank you! 🌾`, "success");
                 this._loadMyWishlist();
             } catch (err) {
@@ -1946,7 +1996,7 @@ const App = {
             }
         });
 
-        modal.classList.remove("hidden");
+        this._openModal("wishlistDetailModal");
     },
 
     async _cancelWishlistItem(itemId) {

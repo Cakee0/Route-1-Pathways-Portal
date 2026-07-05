@@ -87,6 +87,10 @@
 
     --transition: 180ms ease;
 
+    /* Minimum height for interactive controls — audience skews older,
+       so 44px everywhere, not just where WCAG's 24px floor demands */
+    --control-min: 44px;
+
     /* Type roles */
     --font: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-display: "Zilla Slab", Georgia, "Times New Roman", serif;
@@ -131,6 +135,25 @@ a:hover {
 
 ul {
     list-style: none;
+}
+
+/* ── Skip link — visually hidden until focused ───────────────────────────────── */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: 1rem;
+    z-index: 700;
+    /* above toast */
+    background: var(--pine);
+    color: var(--paper);
+    font-weight: 600;
+    padding: .75rem 1.25rem;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    transition: top var(--transition);
+}
+
+.skip-link:focus {
+    top: 0;
 }
 
 /* ── Global focus baseline (keyboard users see a clear ring everywhere) ──────── */
@@ -279,6 +302,7 @@ p {
     align-items: center;
     justify-content: center;
     gap: .4rem;
+    min-height: var(--control-min);
     padding: .55rem 1.2rem;
     font-size: .9rem;
     font-weight: 600;
@@ -342,6 +366,9 @@ p {
 }
 
 .btn-sm {
+    /* dense table/row contexts keep a smaller footprint but never drop
+       below 36px; the site header overrides back up to 44px */
+    min-height: 36px;
     padding: .3rem .75rem;
     font-size: .8rem;
 }
@@ -388,6 +415,7 @@ input[type="number"],
 input[type="tel"],
 select,
 textarea {
+    min-height: var(--control-min);
     padding: .55rem .75rem;
     border: 1.5px solid var(--gray-300);
     border-radius: var(--radius-sm);
@@ -402,9 +430,11 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-    outline: none;
-    border-color: var(--green-500);
-    box-shadow: 0 0 0 3px rgba(64, 145, 108, .15);
+    /* same strong ring the rest of the app gets — the old 15%-alpha shadow
+       was invisible to exactly the users who need it (WCAG 2.4.13) */
+    outline: 3px solid var(--harvest);
+    outline-offset: 1px;
+    border-color: var(--field);
 }
 
 textarea {
@@ -490,7 +520,8 @@ select {
     font-weight: 500;
     color: var(--white);
     box-shadow: var(--shadow-md);
-    z-index: 9999;
+    /* semantic scale: header 100 · modal 200-500 · toast 600 · skip-link 700 */
+    z-index: 600;
     transition: opacity .3s ease, transform .3s ease;
     max-width: 320px;
 }
@@ -859,6 +890,7 @@ select {
 
 .auth-tab {
     flex: 1;
+    min-height: var(--control-min);
     padding: .65rem;
     background: var(--paper);
     border: 2px solid var(--stone-200);
@@ -3113,10 +3145,12 @@ a.btn:hover {
 }
 
 .landing-foot-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-min);
     color: var(--sprout-soft);
     font-weight: 600;
-    padding: .5rem 0;
-    /* 44px touch row on mobile */
+    padding: .25rem .25rem;
     text-decoration: underline;
     text-underline-offset: 3px;
 }
