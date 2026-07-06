@@ -40,6 +40,14 @@ class UserRegisterRequest(BaseModel):
             )
         if self.user_type == UserTypeEnum.consumer:
             self.organization_name = None
+        if self.user_type == UserTypeEnum.farmer and (
+            not (self.location_city or "").strip()
+            or not (self.location_region or "").strip()
+        ):
+            raise ValueError(
+                "Farmers must provide a Minnesota city and region — "
+                "buyers use it to find listings near them."
+            )
         return self
 
     model_config = {"from_attributes": True}
@@ -62,12 +70,16 @@ class GoogleAuthRequest(BaseModel):
 class GoogleRegisterRequest(BaseModel):
     """Finish a Google sign-up by choosing an account type.
 
-    The same Google `credential` is re-verified server-side, so the role is the
-    only thing the client contributes here.
+    The same Google `credential` is re-verified server-side, so the role (and,
+    for farmers, the required location) is all the client contributes here.
     """
     credential:  str
     user_type:   UserTypeEnum
     org_subtype: Optional[OrgSubtypeEnum] = None
+
+    # Farmers must provide these; ignored-if-empty for other roles
+    location_city:   Optional[str] = None
+    location_region: Optional[str] = None
 
     @model_validator(mode="after")
     def org_subtype_required_for_organization(self) -> "GoogleRegisterRequest":
@@ -75,6 +87,14 @@ class GoogleRegisterRequest(BaseModel):
             raise ValueError(
                 "org_subtype is required for organization accounts. "
                 "Choose: restaurant, grocery_store, or food_shelf."
+            )
+        if self.user_type == UserTypeEnum.farmer and (
+            not (self.location_city or "").strip()
+            or not (self.location_region or "").strip()
+        ):
+            raise ValueError(
+                "Farmers must provide a Minnesota city and region — "
+                "buyers use it to find listings near them."
             )
         return self
 

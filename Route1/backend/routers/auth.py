@@ -291,6 +291,8 @@ def google_complete(payload: GoogleRegisterRequest, db: Session = Depends(get_db
         user_type       = payload.user_type,
         org_subtype     = payload.org_subtype,
         full_name       = full_name,
+        location_city   = payload.location_city,
+        location_region = payload.location_region,
     )
     db.add(new_user)
     db.commit()

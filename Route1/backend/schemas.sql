@@ -205,6 +205,21 @@ DELETE gdp_dup FROM `group_donation_participants` gdp_dup
 ALTER TABLE `group_donation_participants`
     ADD UNIQUE KEY `uq_gdp_group_consumer` (`group_donation_id`, `consumer_id`);
 
+-- v5: location is required for farmer accounts (enforced in Pydantic + the UI;
+-- the listing-detail map needs every farmer to have a plottable location).
+-- Backfill legacy farmers with no location to Plymouth (Twin Cities Metro).
+-- Both UPDATEs are no-ops on every later run. No NOT NULL constraint is added
+-- because the columns stay optional for organizations and consumers.
+UPDATE `users`
+    SET `location_city` = 'Plymouth'
+    WHERE `user_type` = 'farmer'
+      AND (`location_city` IS NULL OR TRIM(`location_city`) = '');
+
+UPDATE `users`
+    SET `location_region` = 'Twin Cities Metro'
+    WHERE `user_type` = 'farmer'
+      AND (`location_region` IS NULL OR TRIM(`location_region`) = '');
+
 -- =============================================================================
 -- Future tables (stubs for reference — not created yet)
 -- =============================================================================

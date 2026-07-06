@@ -104,11 +104,11 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="regCity">Minnesota City</label>
+                        <label for="regCity">Minnesota City <span id="regCityReq" class="req-hint hidden">(required)</span></label>
                         <input type="text" id="regCity" placeholder="Minneapolis" />
                     </div>
                     <div class="form-group">
-                        <label for="regRegion">MN Region</label>
+                        <label for="regRegion">MN Region <span id="regRegionReq" class="req-hint hidden">(required)</span></label>
                         <select id="regRegion">
                             <option value="">— Select region —</option>
                             <option value="Twin Cities Metro">Twin Cities Metro</option>
@@ -187,7 +187,28 @@
                     </select>
                 </div>
 
-                <p class="sub-text">You can add your farm/organization name, location, and phone anytime from Profile Settings.</p>
+                <!-- Farmers must provide a location (shown only for the farmer role) -->
+                <div class="form-row hidden" id="gLocationGroup">
+                    <div class="form-group">
+                        <label for="gCity">Minnesota City <span class="req-hint">(required)</span></label>
+                        <input type="text" id="gCity" placeholder="Minneapolis" />
+                    </div>
+                    <div class="form-group">
+                        <label for="gRegion">MN Region <span class="req-hint">(required)</span></label>
+                        <select id="gRegion">
+                            <option value="">— Select region —</option>
+                            <option value="Twin Cities Metro">Twin Cities Metro</option>
+                            <option value="Central Minnesota">Central Minnesota</option>
+                            <option value="Southern Minnesota">Southern Minnesota</option>
+                            <option value="Northern Minnesota">Northern Minnesota</option>
+                            <option value="Northwest Minnesota">Northwest Minnesota</option>
+                            <option value="Southwest Minnesota">Southwest Minnesota</option>
+                            <option value="Southeast Minnesota">Southeast Minnesota</option>
+                        </select>
+                    </div>
+                </div>
+
+                <p class="sub-text">You can add your farm/organization name and phone anytime from Profile Settings.</p>
 
                 <p class="error-msg hidden" role="alert" id="googleCompleteError"></p>
                 <button type="submit" class="btn btn-primary btn-block">Continue</button>

@@ -25,6 +25,22 @@ const API_BASE =
 // "Sign in with Google" buttons entirely.
 const GOOGLE_CLIENT_ID = "398142413341-n6glr5jnmh60li4nmefnh5fdehr3u00p.apps.googleusercontent.com";
 
+// Listing-detail map: cities are geocoded through the free OSM Nominatim API
+// (cached in localStorage, ~1 request/sec per their usage policy). When a city
+// can't be geocoded we fall back to the approximate center of the farmer's
+// Minnesota region below; if that's missing too, the farmer gets no marker.
+const NOMINATIM_BASE = "https://nominatim.openstreetmap.org/search";
+const REGION_CENTROIDS = {
+    "Twin Cities Metro":   { lat: 44.98, lng: -93.30 },
+    "Central Minnesota":   { lat: 45.60, lng: -94.40 },
+    "Southern Minnesota":  { lat: 43.85, lng: -93.40 },
+    "Northern Minnesota":  { lat: 47.40, lng: -92.80 },
+    "Northwest Minnesota": { lat: 47.80, lng: -95.90 },
+    "Southwest Minnesota": { lat: 44.10, lng: -95.60 },
+    "Southeast Minnesota": { lat: 43.95, lng: -92.30 },
+};
+const MN_CENTER = { lat: 46.3, lng: -94.2 };
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════════════════════════════════════════ */
@@ -152,6 +168,13 @@ const App = {
             this.messagingPollTimer = null;
         }
 
+        // Tear down the listing-detail map (its container is about to be removed;
+        // Leaflet throws "container already initialized" on revisit otherwise)
+        if (this._listingMap) {
+            this._listingMap.remove();
+            this._listingMap = null;
+        }
+
         this.currentPage = page;
         this._updateNavActive(page);
 
@@ -177,7 +200,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260709");
+            const res = await fetch(htmlPath + "?v=20260710");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -562,13 +585,17 @@ const App = {
                 const selected = document.querySelector("input[name='userType']:checked")?.value;
                 const isOrg = selected === "organization";
                 const isConsumer = selected === "consumer";
+                const isFarmer = selected === "farmer";
                 document.getElementById("orgSubtypeGroup").classList.toggle("hidden", !isOrg);
                 document.getElementById("orgNameGroup").classList.toggle("hidden", isConsumer);
-                if (selected === "farmer") {
+                if (isFarmer) {
                     document.getElementById("orgNameLabel").textContent = "Farm Name";
                 } else if (isOrg) {
                     document.getElementById("orgNameLabel").textContent = "Organization Name";
                 }
+                // Location is required for farmers (the browse map depends on it)
+                document.getElementById("regCityReq")?.classList.toggle("hidden", !isFarmer);
+                document.getElementById("regRegionReq")?.classList.toggle("hidden", !isFarmer);
             });
         });
 
@@ -594,6 +621,13 @@ const App = {
             const regPassword = document.getElementById("regPassword").value;
             if (regPassword.length < 8) {
                 errEl.textContent = "Password must be at least 8 characters.";
+                errEl.classList.remove("hidden");
+                return;
+            }
+            if (userType === "farmer"
+                && (!document.getElementById("regCity").value.trim()
+                    || !document.getElementById("regRegion").value)) {
+                errEl.textContent = "Farmers must provide their Minnesota city and region so buyers can find them.";
                 errEl.classList.remove("hidden");
                 return;
             }
@@ -630,8 +664,9 @@ const App = {
         // Google role-selection step (new Google users only)
         document.querySelectorAll("input[name='gUserType']").forEach(radio => {
             radio.addEventListener("change", () => {
-                const isOrg = document.querySelector("input[name='gUserType']:checked")?.value === "organization";
-                document.getElementById("gOrgSubtypeGroup").classList.toggle("hidden", !isOrg);
+                const gType = document.querySelector("input[name='gUserType']:checked")?.value;
+                document.getElementById("gOrgSubtypeGroup").classList.toggle("hidden", gType !== "organization");
+                document.getElementById("gLocationGroup")?.classList.toggle("hidden", gType !== "farmer");
             });
         });
         document.getElementById("googleCompleteFormEl")?.addEventListener("submit", e => {
@@ -721,6 +756,13 @@ const App = {
             errEl.classList.remove("hidden");
             return;
         }
+        const gCity = document.getElementById("gCity")?.value.trim() || null;
+        const gRegion = document.getElementById("gRegion")?.value || null;
+        if (userType === "farmer" && (!gCity || !gRegion)) {
+            errEl.textContent = "Farmers must provide their Minnesota city and region so buyers can find them.";
+            errEl.classList.remove("hidden");
+            return;
+        }
         if (!this._pendingGoogleCredential) {
             errEl.textContent = "Your Google session expired. Please sign in with Google again.";
             errEl.classList.remove("hidden");
@@ -732,6 +774,8 @@ const App = {
                 credential: this._pendingGoogleCredential,
                 user_type: userType,
                 org_subtype: orgSubtype,
+                location_city: userType === "farmer" ? gCity : null,
+                location_region: userType === "farmer" ? gRegion : null,
             });
             await this._loginWithToken(data);
         } catch (err) {
@@ -1080,6 +1124,10 @@ const App = {
                 };
                 this.navigate("messaging");
             });
+
+            // Fill in the map beside the listing (not awaited — the page is
+            // already usable; the panel stays hidden if the map can't load)
+            this._initListingMap(l);
         } catch (err) {
             loading.classList.add("hidden");
             errBox.classList.remove("hidden");
@@ -1151,6 +1199,250 @@ const App = {
           <button class="btn btn-primary" id="msgFarmerBtn">💬 Message Farmer</button>
         </div>
       </div>`;
+    },
+
+    /* ── Listing-detail map ──────────────────────────────────────────────────
+       Leaflet + OSM tiles, loaded lazily only on this page. Farmer cities are
+       geocoded via Nominatim (throttled + cached); markers link to listings. */
+    _loadLeaflet() {
+        if (this._leafletPromise) return this._leafletPromise;
+        this._leafletPromise = new Promise((resolve, reject) => {
+            if (window.L) return resolve(window.L);
+            const fail = (msg) => { this._leafletPromise = null; reject(new Error(msg)); };
+
+            const css = document.createElement("link");
+            css.rel = "stylesheet";
+            css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+            css.integrity = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
+            css.crossOrigin = "";
+            document.head.appendChild(css);
+
+            const js = document.createElement("script");
+            js.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            js.integrity = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
+            js.crossOrigin = "";
+            js.onload = () => window.L ? resolve(window.L) : fail("Leaflet loaded without window.L");
+            js.onerror = () => fail("Leaflet script failed to load");
+            setTimeout(() => { if (!window.L) fail("Leaflet load timed out"); }, 10000);
+            document.head.appendChild(js);
+        });
+        return this._leafletPromise;
+    },
+
+    _geoCacheGet(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) return JSON.parse(raw);
+        } catch { /* private mode / quota — fall through to memory */ }
+        return this._geoMem?.[key] ?? null;
+    },
+
+    _geoCacheSet(key, val) {
+        try {
+            localStorage.setItem(key, JSON.stringify(val));
+        } catch {
+            (this._geoMem ||= {})[key] = val;
+        }
+    },
+
+    async _geocodeCity(city) {
+        const name = (city || "").trim();
+        if (!name) return null;
+        const key = "r1_geo:" + name.toLowerCase();
+        const cached = this._geoCacheGet(key);
+        if (cached) {
+            if (cached.lat != null) return { lat: cached.lat, lng: cached.lng };
+            if (cached.miss && Date.now() - (cached.t || 0) < 86400000) return null; // retry misses after 24h
+        }
+
+        // Serialize requests ≥1.1s apart (Nominatim usage policy: max 1/sec)
+        const run = async () => {
+            const wait = 1100 - (Date.now() - (this._geoLastAt || 0));
+            if (wait > 0) await new Promise(r => setTimeout(r, wait));
+            this._geoLastAt = Date.now();
+            const url = `${NOMINATIM_BASE}?format=json&limit=1&countrycodes=us`
+                + `&state=Minnesota&city=${encodeURIComponent(name)}`;
+            const res = await fetch(url, { headers: { Accept: "application/json" } });
+            if (!res.ok) throw new Error(`geocode HTTP ${res.status}`);
+            return res.json();
+        };
+        const p = (this._geoQueue || Promise.resolve()).then(run);
+        this._geoQueue = p.catch(() => {}); // keep the queue alive after failures
+
+        try {
+            const results = await p;
+            if (results && results.length) {
+                const pos = { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
+                if (Number.isFinite(pos.lat) && Number.isFinite(pos.lng)) {
+                    this._geoCacheSet(key, pos);
+                    return pos;
+                }
+            }
+        } catch { /* network / rate limit → treat as a miss */ }
+        this._geoCacheSet(key, { miss: true, t: Date.now() });
+        return null;
+    },
+
+    async _initListingMap(l) {
+        try {
+            const [L, listings] = await Promise.all([
+                this._loadLeaflet(),
+                this.api("GET", "/listings"),
+            ]);
+            const alive = () => this.currentPage === "listing_detail"
+                && !!document.getElementById("listingMap");
+            if (!alive()) return;
+
+            // Group listings by farmer; make sure the current farmer is present
+            const farmers = new Map();
+            (listings || []).forEach(item => {
+                let f = farmers.get(item.farmer_id);
+                if (!f) {
+                    f = {
+                        id: item.farmer_id,
+                        name: item.farm_name || item.farmer_name || "Local farmer",
+                        city: item.location_city,
+                        region: item.location_region,
+                        listings: [],
+                    };
+                    farmers.set(item.farmer_id, f);
+                }
+                f.listings.push(item);
+            });
+            if (!farmers.has(l.farmer.id)) {
+                farmers.set(l.farmer.id, {
+                    id: l.farmer.id,
+                    name: l.farmer.organization_name || l.farmer.full_name || "Local farmer",
+                    city: l.farmer.location_city,
+                    region: l.farmer.location_region,
+                    listings: [],
+                });
+            }
+
+            // Locate the current farmer first so the map centers on them
+            const current = farmers.get(l.farmer.id);
+            const curPos = (await this._geocodeCity(current.city))
+                || REGION_CENTROIDS[current.region] || null;
+            if (!alive()) return;
+
+            const map = L.map("listingMap", { scrollWheelZoom: true });
+            this._listingMap = map;
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            }).addTo(map);
+            map.setView(
+                curPos ? [curPos.lat, curPos.lng] : [MN_CENTER.lat, MN_CENTER.lng],
+                curPos ? 9 : 6,
+            );
+            document.getElementById("listingMapPanel").classList.remove("hidden");
+            map.invalidateSize(); // the container was display:none during setup
+
+            // Once the user pans/zooms, stop reframing the map under them
+            let userMoved = false;
+            const el = map.getContainer();
+            ["pointerdown", "wheel"].forEach(ev =>
+                el.addEventListener(ev, () => { userMoved = true; }, { once: true, passive: true }));
+
+            // Markers grouped by rounded coordinate (same city ⇒ one marker)
+            const groups = new Map();
+            const addMarker = (pos, farmer, isCurrent) => {
+                const gKey = pos.lat.toFixed(3) + "," + pos.lng.toFixed(3);
+                let g = groups.get(gKey);
+                if (!g) { g = { pos, farmers: [], isCurrent: false, marker: null }; groups.set(gKey, g); }
+                if (isCurrent) { g.farmers.unshift(farmer); g.isCurrent = true; }
+                else g.farmers.push(farmer);
+                this._renderMapGroup(L, map, g, l);
+                return g;
+            };
+
+            const currentGroup = curPos ? addMarker(curPos, current, true) : null;
+
+            // Resolve the rest; markers trickle in as cities geocode. Cap fresh
+            // network lookups per page view to stay well inside Nominatim limits.
+            let netBudget = 20;
+            for (const f of farmers.values()) {
+                if (f.id === current.id) continue;
+                if (!alive()) return;
+                let pos = null;
+                if (f.city) {
+                    const peek = this._geoCacheGet("r1_geo:" + f.city.trim().toLowerCase());
+                    const isFresh = peek && (peek.lat != null
+                        || (peek.miss && Date.now() - (peek.t || 0) < 86400000));
+                    if (isFresh || netBudget > 0) {
+                        if (!isFresh) netBudget--;
+                        pos = await this._geocodeCity(f.city);
+                    }
+                }
+                pos = pos || REGION_CENTROIDS[f.region] || null;
+                if (!alive()) return;
+                if (pos) addMarker(pos, f, false);
+            }
+
+            if (groups.size === 0) {
+                // Nothing plottable at all — hide the panel again
+                document.getElementById("listingMapPanel")?.classList.add("hidden");
+                map.remove();
+                this._listingMap = null;
+                return;
+            }
+            if (!userMoved && groups.size > 1) {
+                const bounds = L.latLngBounds([...groups.values()].map(g => [g.pos.lat, g.pos.lng]));
+                map.fitBounds(bounds, { maxZoom: 10, padding: [30, 30] });
+            }
+            // Open the highlighted popup once the fitBounds animation settles —
+            // opening mid-animation makes auto-pan miss and the popup clips
+            if (currentGroup && !userMoved) {
+                setTimeout(() => {
+                    if (this._listingMap === map) currentGroup.marker.openPopup();
+                }, 400);
+            }
+        } catch {
+            // CDN blocked / API error / geocode outage — page works without the map
+            document.getElementById("listingMapPanel")?.classList.add("hidden");
+        }
+    },
+
+    _renderMapGroup(L, map, g, l) {
+        const popupHtml = g.farmers.map(f => {
+            const loc = [f.city, f.region].filter(Boolean).join(", ");
+            const items = f.listings.map(item => {
+                const label = `${this._esc(item.crop_name)} — ${this._esc(item.quantity_available)} ${this._esc(item.quantity_unit)}`;
+                if (item.id === l.id) {
+                    return `<div class="map-pop-listing is-current">${label} <em>(this listing)</em></div>`;
+                }
+                const price = item.price_per_unit != null
+                    ? ` · $${Number(item.price_per_unit).toFixed(2)}` : "";
+                return `<a class="map-pop-listing" href="#/listing/${item.id}">${label}${price}</a>`;
+            }).join("");
+            return `<div class="map-pop-farmer">
+                <strong>🌾 ${this._esc(f.name)}</strong>
+                ${loc ? `<div class="map-pop-loc">📍 ${this._esc(loc)}</div>` : ""}
+                ${items}
+            </div>`;
+        }).join("");
+
+        const size = g.isCurrent ? 26 : 18;
+        const icon = L.divIcon({
+            className: "",
+            html: `<div class="map-marker${g.isCurrent ? " map-marker-current" : ""}"></div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+        });
+
+        if (g.marker) {
+            g.marker.setIcon(icon);
+            g.marker.setPopupContent(popupHtml);
+        } else {
+            g.marker = L.marker([g.pos.lat, g.pos.lng], {
+                icon,
+                title: g.farmers.map(f => f.name).join(", "),
+                keyboard: true,
+            }).addTo(map).bindPopup(popupHtml, {
+                maxHeight: 220,
+                autoPanPadding: [24, 24],
+            });
+        }
     },
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -1589,6 +1881,11 @@ const App = {
         const orgNameGroup = document.getElementById("orgNameGroup");
         orgNameGroup.classList.toggle("hidden", user.user_type === "consumer");
 
+        // Location is required for farmers (the browse map depends on it)
+        const isFarmer = user.user_type === "farmer";
+        document.getElementById("profileCityReq")?.classList.toggle("hidden", !isFarmer);
+        document.getElementById("profileRegionReq")?.classList.toggle("hidden", !isFarmer);
+
         // Fill sidebar
         document.getElementById("profileEmail").textContent = user.email;
         document.getElementById("profileRole").textContent = roleLabel;
@@ -1645,6 +1942,12 @@ const App = {
             location_region: document.getElementById("profileRegion").value || null,
             phone: document.getElementById("profilePhone").value.trim() || null,
         };
+
+        if (this.user?.user_type === "farmer" && (!payload.location_city || !payload.location_region)) {
+            errEl.textContent = "Farmers must have a Minnesota city and region — buyers use it to find you.";
+            errEl.classList.remove("hidden");
+            return;
+        }
 
         try {
             const updated = await this.api("PATCH", "/profiles/me", payload);

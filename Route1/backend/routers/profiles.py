@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, NotificationPreferences
+from models import User, NotificationPreferences, UserTypeEnum
 from routers.auth import get_current_user
 from schemas import (
     ProfileUpdateRequest,
@@ -42,6 +42,18 @@ def update_profile(
     Works for farmers, organizations, and consumers.
     """
     update_data = payload.model_dump(exclude_unset=True)
+
+    # Farmers must always have a location (the browse map depends on it).
+    # Omitted fields are fine; present-but-empty/null is rejected.
+    if current_user.user_type == UserTypeEnum.farmer:
+        for field in ("location_city", "location_region"):
+            if field in update_data and not (update_data[field] or "").strip():
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Farmers must have a Minnesota city and region — "
+                           "buyers use it to find listings near them.",
+                )
+
     for field, value in update_data.items():
         setattr(current_user, field, value)
 

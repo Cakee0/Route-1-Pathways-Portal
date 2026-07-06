@@ -17,6 +17,19 @@
         <button class="btn btn-primary" id="listingErrorBackBtn">Back to browse</button>
     </div>
 
-    <div id="listingContent" class="listing-detail hidden"></div>
+    <div class="listing-detail-grid">
+        <div id="listingContent" class="listing-detail hidden"></div>
+
+        <!-- Map fills in after the listing renders; stays hidden if it can't load -->
+        <aside id="listingMapPanel" class="listing-map-panel hidden" aria-labelledby="listingMapHeading">
+            <div class="card listing-map-card">
+                <h3 id="listingMapHeading" class="listing-farmer-heading">Farmers on the map</h3>
+                <p class="listing-map-sub">This listing's farmer is highlighted in gold. Drag the map to
+                    explore, and click other markers to see listings from farmers near you.</p>
+                <div id="listingMap" role="region" aria-label="Map of Minnesota farmer locations"></div>
+                <p class="listing-map-note">Locations are approximate (city level).</p>
+            </div>
+        </aside>
+    </div>
 
 </div>
