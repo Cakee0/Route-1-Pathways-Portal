@@ -1,0 +1,22 @@
+<!-- components/listing_detail.html — Single crop listing detail (#/listing/<id>) -->
+
+<div class="dashboard listing-detail-page">
+
+    <div class="page-header">
+        <button class="btn btn-ghost" id="listingBackBtn">← Back to browse</button>
+    </div>
+
+    <div class="loading-state" id="listingLoading">
+        <div class="spinner"></div>
+        <p>Loading listing…</p>
+    </div>
+
+    <div class="empty-state hidden" id="listingError">
+        <span>🌾</span>
+        <p>This listing is no longer available. It may have been claimed or removed.</p>
+        <button class="btn btn-primary" id="listingErrorBackBtn">Back to browse</button>
+    </div>
+
+    <div id="listingContent" class="listing-detail hidden"></div>
+
+</div>

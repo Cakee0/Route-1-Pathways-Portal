@@ -15,7 +15,7 @@ import models  # noqa: F401 — side-effect import; registers ORM metadata
 
 from database import create_tables
 from utils.ratelimit import RateLimitMiddleware
-from routers import auth, farmers, organizations, consumers, messaging
+from routers import auth, farmers, organizations, consumers, listings, messaging
 from routers.profiles import router as profiles_router
 from routers.wishlist import router as wishlist_router
 from routers.donations import router as donations_router
@@ -75,6 +75,7 @@ app.include_router(auth.router)
 app.include_router(farmers.router)
 app.include_router(organizations.router)
 app.include_router(consumers.router)
+app.include_router(listings.router)
 app.include_router(messaging.router)
 app.include_router(profiles_router)
 app.include_router(wishlist_router)

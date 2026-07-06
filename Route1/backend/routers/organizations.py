@@ -44,9 +44,9 @@ def browse_farmers(
     )
 
 
-# ── Shared browse logic (also used by consumers router) ──────────────────────
+# ── Shared browse logic (also used by consumers and listings routers) ────────
 
-def _browse_farmers_impl(
+def _query_available_crops(
     db: Session,
     crop_type: Optional[str],
     location_region: Optional[str],
@@ -55,10 +55,12 @@ def _browse_farmers_impl(
     max_price: Optional[float],
     has_transport: Optional[bool],
     donation_only: Optional[bool],
-) -> List[FarmerListingResponse]:
+) -> List[FarmerCropInventory]:
     """
-    Build and execute a crop inventory query with optional filters,
-    then group results by farmer and return FarmerListingResponse objects.
+    Build and execute a crop inventory query with optional filters.
+    Returns the flat list of available listings (farmer relationship loaded),
+    excluding listings whose farmer is missing/inactive or fails the
+    location filters.
     """
     # joinedload avoids a lazy-load query per farmer below (browse is the
     # hottest endpoint — this was a 1+N pattern)
@@ -83,11 +85,9 @@ def _browse_farmers_impl(
             FarmerCropInventory.donation_eligible == True  # noqa: E712
         )
 
-    crops = crop_q.all()
-
-    # Group crops by farmer, applying location filters at the farmer level
-    farmer_map: dict = {}
-    for crop in crops:
+    # Location filters live on the farmer, not the listing
+    results: List[FarmerCropInventory] = []
+    for crop in crop_q.all():
         farmer: User = crop.farmer
         if not farmer or not farmer.is_active:
             continue
@@ -95,7 +95,34 @@ def _browse_farmers_impl(
             continue
         if location_city and (farmer.location_city or "").lower() != location_city.lower():
             continue
+        results.append(crop)
 
+    return results
+
+
+def _browse_farmers_impl(
+    db: Session,
+    crop_type: Optional[str],
+    location_region: Optional[str],
+    location_city: Optional[str],
+    min_price: Optional[float],
+    max_price: Optional[float],
+    has_transport: Optional[bool],
+    donation_only: Optional[bool],
+) -> List[FarmerListingResponse]:
+    """
+    Run the filtered crop query, then group results by farmer and return
+    FarmerListingResponse objects.
+    """
+    crops = _query_available_crops(
+        db, crop_type, location_region, location_city,
+        min_price, max_price, has_transport, donation_only,
+    )
+
+    # Group crops by farmer
+    farmer_map: dict = {}
+    for crop in crops:
+        farmer: User = crop.farmer
         if farmer.id not in farmer_map:
             farmer_map[farmer.id] = {"farmer": farmer, "crops": []}
         farmer_map[farmer.id]["crops"].append(crop)

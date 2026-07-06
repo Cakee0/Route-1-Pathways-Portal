@@ -104,8 +104,9 @@ const App = {
        Hash routing: every view has a URL (#/, #/login, #/register, …) so the
        browser Back button works and pages can be linked/bookmarked.
        ═══════════════════════════════════════════════════════════════════════════ */
-    _hashFor(page, register = false) {
+    _hashFor(page, register = false, opts = {}) {
         if (register) return "#/register";
+        if (page === "listing_detail") return "#/listing/" + opts.listingId;
         const map = {
             landing: "#/",
             about: "#/about",
@@ -126,6 +127,12 @@ const App = {
         const h = location.hash || "#/";
         const loggedIn = !!(this.token && this.user);
 
+        const listingMatch = h.match(/^#\/listing\/(\d+)$/);
+        if (listingMatch) {
+            return loggedIn
+                ? this.navigate("listing_detail", { listingId: parseInt(listingMatch[1], 10) })
+                : this.navigate("login");
+        }
         if (h === "#/login") return loggedIn ? this._navigateToHomeDashboard() : this.navigate("login");
         if (h === "#/register") return loggedIn ? this._navigateToHomeDashboard() : this.navigate("login", { register: true });
         if (h === "#/about") return this.navigate("about");
@@ -156,6 +163,7 @@ const App = {
             farmer_dashboard: "components/farmer_dashboard.html",
             org_dashboard: "components/org_dashboard.html",
             consumer_dashboard: "components/consumer_dashboard.html",
+            listing_detail: "components/listing_detail.html",
             messaging: "components/messaging.html",
             profile_settings: "components/profile_settings.html",
             points_rewards: "components/points_rewards.html",
@@ -169,7 +177,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260708");
+            const res = await fetch(htmlPath + "?v=20260709");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -200,8 +208,9 @@ const App = {
             contact: "Contact us — Route 1 Pathways",
             login: "Log in — Route 1 Pathways",
             farmer_dashboard: "Farmer dashboard — Route 1 Pathways",
-            org_dashboard: "Browse & wishlist — Route 1 Pathways",
-            consumer_dashboard: "Browse farms — Route 1 Pathways",
+            org_dashboard: "Browse listings & wishlist — Route 1 Pathways",
+            consumer_dashboard: "Browse listings — Route 1 Pathways",
+            listing_detail: "Listing details — Route 1 Pathways",
             messaging: "Messages — Route 1 Pathways",
             profile_settings: "Profile settings — Route 1 Pathways",
             points_rewards: "My points — Route 1 Pathways",
@@ -210,7 +219,7 @@ const App = {
         document.title = opts.register
             ? "Create your free account — Route 1 Pathways"
             : (titles[page] || "Route 1 Pathways");
-        const targetHash = this._hashFor(page, !!opts.register);
+        const targetHash = this._hashFor(page, !!opts.register, opts);
         this._lastAppliedHash = targetHash;
         if (location.hash !== targetHash) location.hash = targetHash;
 
@@ -223,6 +232,7 @@ const App = {
             farmer_dashboard: () => this.initFarmerDashboard(),
             org_dashboard: () => this.initBrowseDashboard("org"),
             consumer_dashboard: () => this.initConsumerDashboard(),
+            listing_detail: () => this.initListingDetail(opts.listingId),
             messaging: () => this.initMessaging(),
             profile_settings: () => this.initProfileSettings(),
             points_rewards: () => this.initPointsRewards(),
@@ -914,7 +924,7 @@ const App = {
         const heading = document.getElementById("browseHeading");
         const subtitle = document.getElementById("browseSubtitle");
         if (heading) {
-            heading.textContent = "Browse Minnesota Farmers";
+            heading.textContent = "Browse Crop Listings";
             if (subtitle && role === "org") {
                 const orgLabel = { restaurant: "Restaurant", grocery_store: "Grocery Store", food_shelf: "Food Shelf" }[user.org_subtype] || "Organization";
                 subtitle.textContent = `Viewing as: ${orgLabel}`;
@@ -928,7 +938,21 @@ const App = {
             donationGroup.classList.toggle("hidden", !showDonation);
         }
 
-        // Load with empty filters on init
+        // Restore the last-used filters (e.g. returning from a listing detail
+        // page), then load
+        const saved = this._browseFilters;
+        if (saved) {
+            const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ""; };
+            setVal("filterCrop", saved.crop);
+            setVal("filterRegion", saved.region);
+            setVal("filterCity", saved.city);
+            setVal("filterMinPrice", saved.minPrice);
+            setVal("filterMaxPrice", saved.maxPrice);
+            const tEl = document.getElementById("filterTransport");
+            if (tEl) tEl.checked = !!saved.transport;
+            const dEl = document.getElementById("filterDonation");
+            if (dEl) dEl.checked = !!saved.donation;
+        }
         this._runBrowse(role);
 
         document.getElementById("applyFiltersBtn")
@@ -974,69 +998,157 @@ const App = {
         if (transport) params.set("has_transport", "true");
         if (donation) params.set("donation_only", "true");
 
-        const endpoint = role === "org" ? "/organizations/browse" : "/consumers/browse";
+        // Remembered so returning from a listing detail page restores the search
+        this._browseFilters = { crop, region, city, minPrice, maxPrice, transport, donation };
+
         const qs = params.toString();
 
         try {
-            const farmers = await this.api("GET", `${endpoint}${qs ? "?" + qs : ""}`);
+            const listings = await this.api("GET", `/listings${qs ? "?" + qs : ""}`);
             loading.classList.add("hidden");
 
-            if (!farmers || farmers.length === 0) {
+            if (!listings || listings.length === 0) {
                 empty.classList.remove("hidden");
                 if (count) count.textContent = "No results";
                 return;
             }
-            if (count) count.textContent = `${farmers.length} farmer${farmers.length === 1 ? "" : "s"} found`;
+            if (count) count.textContent = `${listings.length} listing${listings.length === 1 ? "" : "s"} found`;
 
-            grid.innerHTML = farmers.map(f => this._renderFarmerCard(f)).join("");
-
-            // Attach message-farmer button listeners
-            grid.querySelectorAll(".msg-farmer-btn").forEach(btn => {
-                btn.addEventListener("click", () => {
-                    this.pendingMessageTo = { id: parseInt(btn.dataset.farmerId), name: btn.dataset.farmerName };
-                    this.navigate("messaging");
-                });
-            });
+            grid.innerHTML = listings.map(l => this._renderListingCard(l)).join("");
         } catch (err) {
             loading.classList.add("hidden");
             this.showToast(`Browse failed: ${err.message}`, "error");
         }
     },
 
-    _renderFarmerCard(farmer) {
-        const name = this._esc(farmer.full_name || farmer.organization_name || "Unnamed Farmer");
-        const city = this._esc(farmer.location_city || "");
-        const region = this._esc(farmer.location_region || "");
-        const location = [city, region].filter(Boolean).join(", ") || "Location not specified";
+    _renderListingCard(l) {
+        const crop = this._esc(l.crop_name);
+        const qty = `${this._esc(l.quantity_available)} ${this._esc(l.quantity_unit)}`;
+        const price = l.price_per_unit != null
+            ? `$${Number(l.price_per_unit).toFixed(2)} / ${this._esc(l.quantity_unit)}`
+            : "Price on request";
+        const farm = this._esc(l.farm_name || l.farmer_name || "Local farmer");
+        const location = [this._esc(l.location_city || ""), this._esc(l.location_region || "")]
+            .filter(Boolean).join(", ");
+        const snippet = l.description
+            ? this._esc(l.description.length > 90 ? l.description.slice(0, 90) + "…" : l.description)
+            : "";
 
-        const cropChips = farmer.crops.slice(0, 6).map(c => {
-            const label = `${this._esc(c.crop_name)} · ${this._esc(c.quantity_available)} ${this._esc(c.quantity_unit)}`;
-            const cls = c.donation_eligible ? "crop-chip donation" : "crop-chip";
-            return `<span class="${cls}">${label}</span>`;
-        }).join("") + (farmer.crops.length > 6
-            ? `<span class="crop-chip">+${farmer.crops.length - 6} more</span>` : "");
-
-        const meta = [];
-        if (farmer.crops.some(c => c.can_provide_transport)) meta.push("🚚 Can transport");
-        if (farmer.crops.some(c => c.donation_eligible)) meta.push("🎁 Donation options");
-        if (farmer.phone) meta.push(`📞 ${this._esc(farmer.phone)}`);
+        const badges = [];
+        if (l.donation_eligible) badges.push('<span class="badge badge-green">🎁 Donation eligible</span>');
+        if (l.can_provide_transport) badges.push('<span class="badge badge-amber">🚚 Can transport</span>');
 
         return `
-      <div class="farmer-card">
+      <a class="farmer-card listing-card" href="#/listing/${l.id}"
+        aria-label="${crop}, ${qty}, ${this._esc(price)}, from ${farm}">
         <div class="farmer-card-header">
-          <h4>${name}</h4>
-          <div class="farmer-location">📍 ${location}</div>
+          <h4>${crop} · ${qty}</h4>
+          <div class="listing-price">${price}</div>
         </div>
         <div class="farmer-card-body">
-          <div class="crop-chips">${cropChips}</div>
-          ${meta.length ? `<div class="farmer-meta">${meta.map(m => `<span>${m}</span>`).join("")}</div>` : ""}
-          <div class="farmer-card-actions">
-            <button class="btn btn-primary msg-farmer-btn"
-              data-farmer-id="${farmer.id}"
-              data-farmer-name="${name}">
-              💬 Message Farmer
-            </button>
+          ${snippet ? `<p class="listing-snippet">${snippet}</p>` : ""}
+          ${badges.length ? `<div class="listing-badges">${badges.join("")}</div>` : ""}
+          <div class="listing-farmer-line">🌾 ${farm}${location ? ` · 📍 ${location}` : ""}</div>
+        </div>
+      </a>`;
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PAGE: LISTING DETAIL (#/listing/<id>)
+       Full info on one crop listing, with the farmer's info below it.
+       ═══════════════════════════════════════════════════════════════════════════ */
+    async initListingDetail(id) {
+        const loading = document.getElementById("listingLoading");
+        const errBox = document.getElementById("listingError");
+        const content = document.getElementById("listingContent");
+
+        const goBack = () => this._navigateToHomeDashboard();
+        document.getElementById("listingBackBtn")?.addEventListener("click", goBack);
+        document.getElementById("listingErrorBackBtn")?.addEventListener("click", goBack);
+
+        try {
+            const l = await this.api("GET", `/listings/${id}`);
+            loading.classList.add("hidden");
+            document.title = `${l.crop_name} — Route 1 Pathways`;
+            content.innerHTML = this._renderListingDetail(l);
+            content.classList.remove("hidden");
+
+            document.getElementById("msgFarmerBtn")?.addEventListener("click", () => {
+                this.pendingMessageTo = {
+                    id: l.farmer.id,
+                    name: l.farmer.full_name || l.farmer.organization_name || "Farmer",
+                };
+                this.navigate("messaging");
+            });
+        } catch (err) {
+            loading.classList.add("hidden");
+            errBox.classList.remove("hidden");
+        }
+    },
+
+    _renderListingDetail(l) {
+        const crop = this._esc(l.crop_name);
+        const qty = `${this._esc(l.quantity_available)} ${this._esc(l.quantity_unit)}`;
+        const price = l.price_per_unit != null
+            ? `$${Number(l.price_per_unit).toFixed(2)} / ${this._esc(l.quantity_unit)}`
+            : "Price on request";
+        const listed = l.created_at
+            ? new Date(l.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+            : "";
+
+        const badges = [];
+        if (l.donation_eligible) badges.push('<span class="badge badge-green">🎁 Donation eligible</span>');
+        if (l.can_provide_transport) badges.push('<span class="badge badge-amber">🚚 Can provide transport</span>');
+        if (l.needs_transport) badges.push('<span class="badge badge-gray">📦 Needs transport</span>');
+
+        const f = l.farmer;
+        const farmerName = this._esc(f.full_name || f.organization_name || "Farmer");
+        const farmName = f.organization_name ? this._esc(f.organization_name) : "";
+        const location = [this._esc(f.location_city || ""), this._esc(f.location_region || "")]
+            .filter(Boolean).join(", ") || "Location not specified";
+
+        return `
+      <div class="card">
+        <h2 class="listing-title">${crop}</h2>
+        <div class="listing-detail-meta">
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Quantity</span>
+            <span class="listing-detail-value">${qty}</span>
           </div>
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Price</span>
+            <span class="listing-detail-value listing-price">${price}</span>
+          </div>
+        </div>
+        ${badges.length ? `<div class="listing-badges">${badges.join("")}</div>` : ""}
+        <p class="listing-description">${l.description ? this._esc(l.description) : "No description provided."}</p>
+        ${listed ? `<p class="listing-listed-date">Listed ${listed}</p>` : ""}
+      </div>
+
+      <div class="card" aria-labelledby="listingFarmerHeading">
+        <h3 id="listingFarmerHeading" class="listing-farmer-heading">About the farmer</h3>
+        <div class="listing-detail-meta">
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Name</span>
+            <span class="listing-detail-value">${farmerName}</span>
+          </div>
+          ${farmName && farmName !== farmerName ? `
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Farm / business</span>
+            <span class="listing-detail-value">${farmName}</span>
+          </div>` : ""}
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Location</span>
+            <span class="listing-detail-value">📍 ${location}</span>
+          </div>
+          ${f.phone ? `
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Phone</span>
+            <span class="listing-detail-value"><a href="tel:${this._esc(f.phone)}">📞 ${this._esc(f.phone)}</a></span>
+          </div>` : ""}
+        </div>
+        <div class="listing-detail-actions">
+          <button class="btn btn-primary" id="msgFarmerBtn">💬 Message Farmer</button>
         </div>
       </div>`;
     },

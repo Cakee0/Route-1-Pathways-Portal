@@ -1266,6 +1266,106 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     flex-wrap: wrap;
 }
 
+/* ── Listing cards: the whole card is a link to #/listing/<id> ──────────────── */
+.listing-card {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.farmer-card-header .listing-price {
+    font-size: .85rem;
+    color: var(--harvest-soft);
+    font-weight: 600;
+    margin-top: .2rem;
+}
+
+.listing-snippet {
+    font-size: .875rem;
+    color: var(--gray-500);
+    margin-bottom: .85rem;
+}
+
+.listing-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-bottom: .85rem;
+}
+
+.listing-farmer-line {
+    font-size: .8rem;
+    color: var(--gray-500);
+    border-top: 1px solid var(--stone-200);
+    padding-top: .65rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LISTING DETAIL PAGE  (#/listing/<id>)
+   ══════════════════════════════════════════════════════════════════════════════ */
+.listing-detail {
+    max-width: 760px;
+}
+
+.listing-detail .card + .card {
+    margin-top: 1.25rem;
+}
+
+.listing-title {
+    margin-bottom: .75rem;
+}
+
+.listing-farmer-heading {
+    font-family: var(--font-display);
+    margin-bottom: .75rem;
+}
+
+.listing-detail-meta {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-bottom: .85rem;
+}
+
+.listing-detail-row {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+}
+
+.listing-detail-label {
+    flex: 0 0 130px;
+    font-size: .8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--gray-500);
+}
+
+.listing-detail-value {
+    font-size: .95rem;
+}
+
+.listing-detail .listing-price {
+    color: var(--pine);
+    font-weight: 600;
+}
+
+.listing-description {
+    color: var(--soil-soft);
+    margin-bottom: .65rem;
+}
+
+.listing-listed-date {
+    font-size: .8rem;
+    color: var(--gray-500);
+}
+
+.listing-detail-actions {
+    margin-top: .85rem;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    MESSAGING
    ══════════════════════════════════════════════════════════════════════════════ */

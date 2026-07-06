@@ -4,14 +4,14 @@
 
     <div class="page-header">
         <div>
-            <h2 id="browseHeading">Browse Farmers</h2>
-            <p class="sub-text" id="browseSubtitle">Find local Minnesota farmers with available produce</p>
+            <h2 id="browseHeading">Browse Crop Listings</h2>
+            <p class="sub-text" id="browseSubtitle">Fresh produce from local Minnesota farmers</p>
         </div>
     </div>
 
     <!-- ── VIEW TABS ─────────────────────────────────────────────────────── -->
     <div class="consumer-view-tabs">
-        <button class="consumer-tab active" id="tabBrowse" data-view="browse">🌾 Browse Farmers</button>
+        <button class="consumer-tab active" id="tabBrowse" data-view="browse">🌾 Browse Listings</button>
         <button class="consumer-tab" id="tabDonate" data-view="donate">🎁 Donation Opportunities</button>
     </div>
 
@@ -87,12 +87,12 @@
 
                 <div class="loading-state" id="browseLoading">
                     <div class="spinner"></div>
-                    <p>Searching farmers…</p>
+                    <p>Searching listings…</p>
                 </div>
 
                 <div class="empty-state hidden" id="browseEmpty">
                     <span>🔍</span>
-                    <p>No farmers match your filters. Try broadening your search.</p>
+                    <p>No listings match your filters. Try broadening your search.</p>
                 </div>
 
                 <div id="farmerGrid" class="farmer-grid"></div>
