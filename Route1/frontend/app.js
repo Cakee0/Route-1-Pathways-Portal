@@ -200,7 +200,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260710");
+            const res = await fetch(htmlPath + "?v=20260711");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -262,6 +262,10 @@ const App = {
             wishlist_manage: () => this.initWishlistManage(),
         };
         inits[page]?.();
+
+        // Scroll-reveal for any page that marks furniture with .reveal
+        // (progressive enhancement — content stays visible without JS)
+        this._initReveals();
 
         // Deep-linked register (#/register): open the Create Account tab, and say
         // so if the tab isn't there instead of silently landing on the login form.
@@ -519,19 +523,22 @@ const App = {
 
     initLanding() {
         // CTAs are real links (#/register, #/login) — hash routing handles them.
+        // Scroll reveals are wired site-wide by _initReveals() in navigate().
+    },
 
-        // Scroll-reveal (progressive enhancement; CSS handles reduced-motion)
-        const root = document.querySelector(".landing");
-        const reveals = document.querySelectorAll(".landing .reveal");
-        if (root && reveals.length && "IntersectionObserver" in window) {
-            root.classList.add("js-reveal");
-            const io = new IntersectionObserver((entries) => {
-                entries.forEach(e => {
-                    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-                });
-            }, { threshold: 0.15 });
-            reveals.forEach(el => io.observe(el));
-        }
+    // Scroll-reveal (progressive enhancement; CSS handles reduced-motion).
+    // Any page fragment can opt in by putting .reveal on its furniture.
+    _initReveals() {
+        const root = document.getElementById("app");
+        const reveals = root?.querySelectorAll(".reveal");
+        if (!root || !reveals?.length || !("IntersectionObserver" in window)) return;
+        root.classList.add("js-reveal");
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+            });
+        }, { threshold: 0.15 });
+        reveals.forEach(el => io.observe(el));
     },
 
     initLogin() {
@@ -2077,9 +2084,9 @@ const App = {
           <div class="points-history-row">
             <div>
               <strong class="points-hist-pts">+${e.points} pts</strong>
-              <span class="muted" style="margin-left:.5rem;">${e.description || "Donation"}</span>
+              <span class="muted points-hist-desc">${e.description || "Donation"}</span>
             </div>
-            <span class="muted">${new Date(e.created_at).toLocaleDateString()}</span>
+            <span class="muted num">${new Date(e.created_at).toLocaleDateString()}</span>
           </div>`).join("");
             }
         } catch (err) {

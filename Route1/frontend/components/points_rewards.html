@@ -13,53 +13,53 @@
 
         <!-- ── LEFT: VERTICAL PROGRESS BAR ─────────────────────────────────── -->
         <div class="points-progress-col">
-            <div class="card points-bar-card">
+            <div class="card points-bar-card reveal">
                 <h3 class="card-title">Progress</h3>
                 <p class="muted" id="pointsTotalLabel">Loading…</p>
 
                 <div class="points-bar-container">
 
-                    <!-- Tier 3 label (top) -->
-                    <div class="tier-label tier-top">
-                        <div class="tier-circle" id="tier3Circle">
-                            <span>🏆</span>
-                        </div>
-                        <div class="tier-info">
-                            <strong>Tier 3</strong>
-                            <span class="muted">3,000 pts</span>
-                        </div>
-                    </div>
-
-                    <!-- Vertical bar wrapper -->
+                    <!-- Vertical bar wrapper — markers AND labels share its
+                         coordinate system so they can never drift apart -->
                     <div class="vbar-wrapper">
                         <div class="vbar-track">
                             <div class="vbar-fill" id="vbarFill"></div>
                         </div>
-                        <!-- Tier markers on bar -->
-                        <div class="tier-marker" id="tierMarker3" style="bottom: 100%"></div>
-                        <div class="tier-marker" id="tierMarker2" style="bottom: 50%"></div>
-                        <div class="tier-marker" id="tierMarker1" style="bottom: 16.67%"></div>
-                    </div>
 
-                    <!-- Tier 2 label (middle) -->
-                    <div class="tier-label tier-mid">
-                        <div class="tier-circle" id="tier2Circle">
-                            <span>⭐</span>
-                        </div>
-                        <div class="tier-info">
-                            <strong>Tier 2</strong>
-                            <span class="muted">1,500 pts</span>
-                        </div>
-                    </div>
+                        <!-- Tier markers on bar (bottom % = threshold / 3000) -->
+                        <div class="tier-marker tier-at-100" id="tierMarker3"></div>
+                        <div class="tier-marker tier-at-50" id="tierMarker2"></div>
+                        <div class="tier-marker tier-at-1667" id="tierMarker1"></div>
 
-                    <!-- Tier 1 label (lower) -->
-                    <div class="tier-label tier-low">
-                        <div class="tier-circle" id="tier1Circle">
-                            <span>🌱</span>
+                        <!-- Tier labels, each centered on its notch -->
+                        <div class="tier-label tier-at-100">
+                            <div class="tier-circle" id="tier3Circle">
+                                <span>🏆</span>
+                            </div>
+                            <div class="tier-info">
+                                <strong>Tier 3</strong>
+                                <span class="muted">3,000 pts</span>
+                            </div>
                         </div>
-                        <div class="tier-info">
-                            <strong>Tier 1</strong>
-                            <span class="muted">500 pts</span>
+
+                        <div class="tier-label tier-at-50">
+                            <div class="tier-circle" id="tier2Circle">
+                                <span>⭐</span>
+                            </div>
+                            <div class="tier-info">
+                                <strong>Tier 2</strong>
+                                <span class="muted">1,500 pts</span>
+                            </div>
+                        </div>
+
+                        <div class="tier-label tier-at-1667">
+                            <div class="tier-circle" id="tier1Circle">
+                                <span>🌱</span>
+                            </div>
+                            <div class="tier-info">
+                                <strong>Tier 1</strong>
+                                <span class="muted">500 pts</span>
+                            </div>
                         </div>
                     </div>
 
@@ -76,7 +76,7 @@
         <div class="points-detail-col">
 
             <!-- Summary cards -->
-            <div class="points-summary-row">
+            <div class="points-summary-row reveal reveal-2">
                 <div class="card stat-card">
                     <div class="stat-value" id="totalPointsDisplay">—</div>
                     <div class="stat-label">Total Points</div>
@@ -92,7 +92,7 @@
             </div>
 
             <!-- Reward tiers explanation -->
-            <div class="card tiers-card">
+            <div class="card tiers-card reveal reveal-3">
                 <h3 class="card-title">Reward Tiers</h3>
                 <p class="card-sub">Rewards are coming soon — keep donating to secure your progress!</p>
                 <div class="tiers-list">

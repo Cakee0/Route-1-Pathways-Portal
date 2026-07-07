@@ -24,7 +24,7 @@
     href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260711" />
 
   <!-- Google Identity Services (Sign in with Google) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -57,6 +57,16 @@
     </div>
   </main>
 
+  <!-- ── Site footer (hidden on the landing page, which ships its own) ───── -->
+  <footer class="site-footer landing-footer">
+    <span class="landing-foot-brand">Route <strong>1</strong> Pathways</span>
+    <nav class="landing-foot-links" aria-label="Footer">
+      <a href="#/about">About us</a>
+      <a href="#/contact">Contact</a>
+    </nav>
+    <span class="landing-foot-tag">A Minnesota food rescue marketplace</span>
+  </footer>
+
   <!-- ── Toast notification ─────────────────────────────────────────────── -->
   <div id="toast" class="toast-hide" role="alert" aria-live="polite"></div>
 
@@ -68,7 +78,7 @@
           async src="https://gc.zgo.at/count.js"></script>
 
   <!-- ── SPA logic ──────────────────────────────────────────────────────── -->
-  <script src="app.js?v=20260710"></script>
+  <script src="app.js?v=20260711"></script>
 </body>
 
 </html>

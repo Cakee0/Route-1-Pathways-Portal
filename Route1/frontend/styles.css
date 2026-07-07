@@ -55,6 +55,14 @@
     /* error / destructive — earthy brick, not fire-engine red */
     --clay-soft: #f7e6e1;
 
+    /* Atmosphere — dawn-band headers and landing sky share these */
+    --cloud: #fffdf8;
+    /* warm cloud white */
+    --dawn-cream: #f7eedb;
+    /* gold-warmed horizon end of the dawn gradient */
+    --sprout-mid: #d6e2c4;
+    /* between sprout-soft and sprout — secondary hover fill */
+
     /* ---- Back-compat aliases (so existing class names keep working) ---- */
     --green-900: var(--pine);
     --green-700: var(--field);
@@ -91,6 +99,14 @@
        so 44px everywhere, not just where WCAG's 24px floor demands */
     --control-min: 44px;
 
+    /* Spacing scale — use in any rule touched going forward */
+    --space-1: .25rem;
+    --space-2: .5rem;
+    --space-3: .75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+
     /* Type roles */
     --font: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --font-display: "Zilla Slab", Georgia, "Times New Roman", serif;
@@ -120,6 +136,9 @@ body {
         radial-gradient(50% 40% at 0% 0%, rgba(60, 110, 74, .05), transparent 55%),
         linear-gradient(180deg, var(--morning) 0%, #eef1ea 45%, #f3efe5 100%);
     min-height: 100vh;
+    /* sticky footer: main grows, .site-footer's margin-top:auto pins it down */
+    display: flex;
+    flex-direction: column;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -272,8 +291,12 @@ p {
 
 /* Card heading helpers used across components */
 .card-title {
+    /* one look at any heading level — h2 for document order, h3 elsewhere */
+    font-family: var(--font);
     font-size: 1.05rem;
     font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.4;
     color: var(--soil);
 }
 
@@ -311,7 +334,8 @@ p {
     cursor: pointer;
     font-family: var(--font);
     transition: background var(--transition), color var(--transition),
-        border-color var(--transition), box-shadow var(--transition);
+        border-color var(--transition), box-shadow var(--transition),
+        transform var(--transition);
     white-space: nowrap;
 }
 
@@ -327,6 +351,8 @@ p {
 
 .btn-primary:hover {
     background: var(--field-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary {
@@ -336,7 +362,9 @@ p {
 }
 
 .btn-secondary:hover {
-    background: #d6e2c4;
+    background: var(--sprout-mid);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-danger {
@@ -363,6 +391,35 @@ p {
 
 .btn-block {
     width: 100%;
+}
+
+/* Gold "harvest fill" sweep — reserved for value-committing CTAs only
+   (confirm donation, create account). Value wears gold; ordinary actions don't. */
+.btn-sweep {
+    position: relative;
+    overflow: hidden;
+    z-index: 0;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-sweep::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--harvest);
+    transform: translateX(-101%);
+    transition: transform .38s ease;
+}
+
+.btn-sweep:hover {
+    color: var(--soil);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-sweep:hover::before {
+    transform: translateX(0);
 }
 
 .btn-sm {
@@ -402,10 +459,32 @@ p {
     margin-top: 0;
 }
 
+/* hint text inside a field group sits close to its input, no inline styles */
+.form-group .muted {
+    margin-top: .35rem;
+}
+
+.form-hint {
+    font-size: .8rem;
+    margin: var(--space-1) 0 .4rem;
+}
+
+.form-actions-spaced {
+    margin-top: var(--space-5);
+}
+
+.toggle-row-spaced {
+    margin-bottom: var(--space-4);
+}
+
+.points-card-cta {
+    margin-top: var(--space-4);
+}
+
 label {
     font-size: .85rem;
     font-weight: 600;
-    color: var(--gray-700);
+    color: var(--soil-soft);
 }
 
 input[type="text"],
@@ -417,14 +496,20 @@ select,
 textarea {
     min-height: var(--control-min);
     padding: .55rem .75rem;
-    border: 1.5px solid var(--gray-300);
+    border: 1.5px solid var(--stone-300);
     border-radius: var(--radius-sm);
     font-size: .9rem;
     font-family: var(--font);
-    color: var(--gray-900);
-    background: var(--white);
+    color: var(--soil);
+    background: var(--paper);
     transition: border-color var(--transition), box-shadow var(--transition);
     width: 100%;
+}
+
+input:hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+    border-color: var(--sprout);
 }
 
 input:focus,
@@ -467,18 +552,18 @@ select {
     font-size: .875rem;
     font-weight: 500;
     cursor: pointer;
-    color: var(--gray-700);
+    color: var(--soil-soft);
 }
 
 .checkbox-label input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: var(--green-700);
+    accent-color: var(--field);
     cursor: pointer;
 }
 
 .donation-check {
-    color: var(--green-700);
+    color: var(--field);
 }
 
 .error-msg {
@@ -518,7 +603,7 @@ select {
     border-radius: var(--radius-sm);
     font-size: .9rem;
     font-weight: 500;
-    color: var(--white);
+    color: var(--paper);
     box-shadow: var(--shadow-md);
     /* semantic scale: header 100 · modal 200-500 · toast 600 · skip-link 700 */
     z-index: 600;
@@ -527,11 +612,11 @@ select {
 }
 
 #toast.toast-success {
-    background: var(--green-700);
+    background: var(--field);
 }
 
 #toast.toast-error {
-    background: var(--red-500);
+    background: var(--clay);
 }
 
 #toast.toast-hide {
@@ -567,7 +652,7 @@ select {
     display: flex;
     align-items: center;
     gap: .6rem;
-    color: var(--white);
+    color: var(--paper);
     flex-shrink: 0;
     cursor: pointer;
 }
@@ -637,15 +722,15 @@ select {
 .nav-link:hover,
 .nav-link.active {
     background: rgba(255, 255, 255, .15);
-    color: var(--white);
+    color: var(--paper);
 }
 
 .nav-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--amber-400);
-    color: var(--gray-900);
+    background: var(--harvest);
+    color: var(--soil);
     border-radius: 999px;
     min-width: 18px;
     height: 18px;
@@ -682,6 +767,7 @@ select {
    MAIN CONTENT
    ══════════════════════════════════════════════════════════════════════════════ */
 .main-content {
+    width: 100%;
     max-width: 1280px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
@@ -696,7 +782,7 @@ select {
     justify-content: center;
     gap: .75rem;
     padding: 3rem;
-    color: var(--gray-500);
+    color: var(--ash);
     text-align: center;
 }
 
@@ -707,8 +793,8 @@ select {
 .spinner {
     width: 36px;
     height: 36px;
-    border: 3px solid var(--green-200);
-    border-top-color: var(--green-700);
+    border: 3px solid var(--sprout-soft);
+    border-top-color: var(--field);
     border-radius: 50%;
     animation: spin .7s linear infinite;
 }
@@ -742,7 +828,13 @@ select {
     border-radius: var(--radius-md);
     background:
         radial-gradient(80% 140% at 92% -30%, rgba(200, 136, 31, .14), transparent 60%),
-        linear-gradient(110deg, var(--sprout-soft) 0%, #eef2e7 48%, #f7eedb 100%);
+        linear-gradient(110deg, var(--sprout-soft) 0%, #eef2e7 48%, var(--dawn-cream) 100%);
+}
+
+/* Subtitles sit on the tinted band — ash misses AA there (4.28:1), soil-soft
+   clears it comfortably */
+.page-header .sub-text {
+    color: var(--soil-soft);
 }
 
 /* gold horizon line along the bottom of the band */
@@ -765,9 +857,9 @@ select {
     left: -90px;
     width: 60px;
     height: 18px;
-    background: #fffdf8;
+    background: var(--cloud);
     border-radius: 20px;
-    box-shadow: 16px -7px 0 -3px #fffdf8, 34px -1px 0 -5px #fffdf8;
+    box-shadow: 16px -7px 0 -3px var(--cloud), 34px -1px 0 -5px var(--cloud);
     opacity: .55;
     pointer-events: none;
     animation: headerCloud 40s linear infinite;
@@ -985,6 +1077,19 @@ select {
     margin-top: .5rem;
 }
 
+/* Field-light wash on the farmer's ledger card — same treatment as the
+   contact info card, so the plainest page still carries the landscape */
+.farmer-listings-card {
+    background:
+        radial-gradient(90% 150% at 100% -30%, rgba(60, 110, 74, .06), transparent 60%),
+        var(--paper);
+}
+
+/* The collapsible add-crop form rises in when opened */
+#addCropForm:not(.hidden) {
+    animation: cardRise .35s ease;
+}
+
 /* Farmer "ledger": Quantity (col 2) & Price/unit (col 3) as tabular mono — the
    scale-house ticket read. Column order is fixed in the markup. */
 .farmer-dashboard td:nth-child(2),
@@ -1086,10 +1191,42 @@ tr:hover td {
 .filters-sidebar {
     position: sticky;
     top: 76px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
 }
 
-.filters-sidebar h3 {
-    margin-bottom: .25rem;
+/* flex gap owns the rhythm inside the sidebar — retire the margin hacks */
+.filters-sidebar .form-group+.form-group,
+.filters-sidebar .form-row {
+    margin-top: 0;
+}
+
+.filters-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.filters-head h3 {
+    margin-bottom: 0;
+}
+
+.filters-sidebar .price-row {
+    gap: var(--space-3);
+}
+
+.filters-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--stone-200);
+}
+
+.filters-actions .btn+.btn {
+    margin-left: 0;
 }
 
 /* ── Role plate — the "Viewing as: …" org-subtype context, made intentional ──
@@ -1139,7 +1276,6 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
    Shown for consumers and food-shelf orgs (toggled by app.js). Gold framing so
    the food-rescue flow reads as purpose-built, not bolted on. */
 #donationFilterGroup {
-    margin-top: .85rem;
     padding: .75rem .85rem;
     background: var(--harvest-soft);
     border: 2px solid rgba(200, 136, 31, .45);
@@ -1155,13 +1291,8 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     accent-color: var(--harvest-deep);
 }
 
-.filters-sidebar .btn-block+.btn-block {
-    margin-top: .5rem;
-    margin-left: 0;
-}
-
 .price-row {
-    gap: .5rem;
+    gap: var(--space-3);
 }
 
 .browse-results {
@@ -1178,7 +1309,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .result-count {
     font-size: .875rem;
-    color: var(--gray-500);
+    color: var(--ash);
     font-weight: 500;
 }
 
@@ -1186,6 +1317,45 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1rem;
+}
+
+/* Fetched-card entrance — a short rise as results land. Stagger caps at the
+   fifth card so long refetches don't ripple forever. */
+.farmer-grid>*,
+.donation-grid>*,
+.wishlist-grid>* {
+    animation: cardRise .4s ease backwards;
+}
+
+.farmer-grid>*:nth-child(2),
+.donation-grid>*:nth-child(2),
+.wishlist-grid>*:nth-child(2) {
+    animation-delay: 60ms;
+}
+
+.farmer-grid>*:nth-child(3),
+.donation-grid>*:nth-child(3),
+.wishlist-grid>*:nth-child(3) {
+    animation-delay: 120ms;
+}
+
+.farmer-grid>*:nth-child(4),
+.donation-grid>*:nth-child(4),
+.wishlist-grid>*:nth-child(4) {
+    animation-delay: 180ms;
+}
+
+.farmer-grid>*:nth-child(n+5),
+.donation-grid>*:nth-child(n+5),
+.wishlist-grid>*:nth-child(n+5) {
+    animation-delay: 240ms;
+}
+
+@keyframes cardRise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
 }
 
 .farmer-card {
@@ -1201,6 +1371,10 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 .farmer-card:hover {
     box-shadow: var(--shadow-md);
     border-color: var(--sprout);
+}
+
+/* Only the clickable listing anchor earns the lift */
+.listing-card:hover {
     transform: translateY(-2px);
 }
 
@@ -1256,7 +1430,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     flex-wrap: wrap;
     gap: .5rem .85rem;
     font-size: .8rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-bottom: .85rem;
 }
 
@@ -1283,7 +1457,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .listing-snippet {
     font-size: .875rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-bottom: .85rem;
 }
 
@@ -1296,7 +1470,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .listing-farmer-line {
     font-size: .8rem;
-    color: var(--gray-500);
+    color: var(--ash);
     border-top: 1px solid var(--stone-200);
     padding-top: .65rem;
 }
@@ -1340,7 +1514,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .04em;
-    color: var(--gray-500);
+    color: var(--ash);
 }
 
 .listing-detail-value {
@@ -1348,8 +1522,18 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .listing-detail .listing-price {
-    color: var(--pine);
-    font-weight: 600;
+    /* value wears gold — 1.2rem/700 is AA-large, where harvest-deep passes */
+    color: var(--harvest-deep);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* Fetched content rises in when it unhides (IO can't observe display:none) */
+#listingContent:not(.hidden),
+.listing-map-panel:not(.hidden) {
+    animation: cardRise .4s ease;
 }
 
 .listing-description {
@@ -1359,7 +1543,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .listing-listed-date {
     font-size: .8rem;
-    color: var(--gray-500);
+    color: var(--ash);
 }
 
 .listing-detail-actions {
@@ -1392,13 +1576,13 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .listing-map-sub {
     font-size: .85rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-bottom: .75rem;
 }
 
 .listing-map-note {
     font-size: .75rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-top: .5rem;
 }
 
@@ -1432,7 +1616,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .map-pop-loc {
-    color: var(--gray-500);
+    color: var(--ash);
     font-size: .78rem;
     margin: .15rem 0 .3rem;
 }
@@ -1498,6 +1682,12 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     justify-content: space-between;
 }
 
+/* The refresh control is icon-only — give it the full 44px target here */
+.sidebar-header .btn-sm {
+    min-height: var(--control-min);
+    min-width: var(--control-min);
+}
+
 .conversations-list {
     display: flex;
     flex-direction: column;
@@ -1508,6 +1698,8 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     display: flex;
     flex-direction: column;
     gap: .2rem;
+    min-height: var(--control-min);
+    justify-content: center;
     padding: .75rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -1516,12 +1708,12 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .conv-item:hover {
-    background: var(--green-50);
+    background: var(--stone-100);
 }
 
 .conv-item.active {
-    background: var(--green-50);
-    border-color: var(--green-400);
+    background: var(--stone-100);
+    border-color: var(--sprout);
 }
 
 .conv-name {
@@ -1531,7 +1723,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .conv-preview {
     font-size: .8rem;
-    color: var(--gray-500);
+    color: var(--ash);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1543,18 +1735,18 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     align-items: center;
     justify-content: space-between;
     font-size: .75rem;
-    color: var(--gray-500);
+    color: var(--ash);
 }
 
 .unread-dot {
     width: 8px;
     height: 8px;
-    background: var(--green-500);
+    background: var(--field);
     border-radius: 50%;
 }
 
 .message-area {
-    background: var(--white);
+    background: var(--paper);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     display: flex;
@@ -1568,7 +1760,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: var(--gray-500);
+    color: var(--ash);
     gap: .75rem;
     padding: 3rem;
 }
@@ -1589,7 +1781,9 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--gray-300);
+    /* a whisper of dawn light — the only ornament on this task surface */
+    background: linear-gradient(110deg, var(--sprout-soft), transparent 70%);
+    border-bottom: 1px solid var(--stone-300);
     flex-shrink: 0;
 }
 
@@ -1620,15 +1814,15 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .msg-bubble.sent {
     align-self: flex-end;
-    background: var(--green-700);
-    color: var(--white);
+    background: var(--field);
+    color: var(--paper);
     border-bottom-right-radius: 3px;
 }
 
 .msg-bubble.received {
     align-self: flex-start;
-    background: var(--gray-100);
-    color: var(--gray-900);
+    background: var(--stone-100);
+    color: var(--soil);
     border-bottom-left-radius: 3px;
 }
 
@@ -1643,7 +1837,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     display: flex;
     gap: .75rem;
     padding: 1rem 1.25rem;
-    border-top: 1px solid var(--gray-300);
+    border-top: 1px solid var(--stone-300);
     flex-shrink: 0;
     align-items: flex-end;
 }
@@ -1779,7 +1973,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 .toggle-track {
     position: absolute;
     inset: 0;
-    background: var(--gray-300);
+    background: var(--stone-300);
     border-radius: 999px;
     cursor: pointer;
     transition: background var(--transition);
@@ -1792,13 +1986,13 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     height: 20px;
     left: 3px;
     bottom: 3px;
-    background: var(--white);
+    background: var(--paper);
     border-radius: 50%;
     transition: transform var(--transition);
 }
 
 .toggle-switch input:checked+.toggle-track {
-    background: var(--green-500);
+    background: var(--field);
 }
 
 .toggle-switch input:checked+.toggle-track::before {
@@ -1846,7 +2040,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .account-label {
-    color: var(--gray-500);
+    color: var(--ash);
 }
 
 .account-value {
@@ -1859,13 +2053,13 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .form-label-hint {
     font-size: .85rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-bottom: .5rem;
 }
 
 .divider {
     border: none;
-    border-top: 1px solid var(--gray-200);
+    border-top: 1px solid var(--stone-200);
     margin: 1rem 0;
 }
 
@@ -1878,12 +2072,20 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 .points-big {
     font-size: 2.5rem;
     font-weight: 600;
-    color: var(--soil);
+    /* value wears gold — 4.32:1 at this size clears AA-large */
+    color: var(--harvest-deep);
     letter-spacing: -.02em;
 }
 
+/* The profile's points card is a value surface — a faint gold dawn corner */
+#profilePointsCard {
+    background:
+        radial-gradient(90% 150% at 100% -30%, rgba(200, 136, 31, .10), transparent 60%),
+        var(--paper);
+}
+
 .points-label {
-    color: var(--gray-500);
+    color: var(--ash);
     font-size: .9rem;
 }
 
@@ -1906,6 +2108,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 .consumer-tab {
     background: none;
     border: none;
+    min-height: var(--control-min);
     padding: .6rem 1.25rem;
     font-size: .95rem;
     font-weight: 600;
@@ -1935,6 +2138,27 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     margin-bottom: 1.25rem;
 }
 
+/* Horizontal filter bar (donate tab) — same field vocabulary as the sidebar */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-3);
+    align-items: flex-end;
+}
+
+.filter-bar .form-group {
+    flex: 1;
+    min-width: 180px;
+    margin-top: 0;
+}
+
+/* checkbox group has no tall input — pad it so the box centers on the 44px
+   button row beside it */
+.filter-bar .form-group:has(> .checkbox-label) {
+    flex: 0 0 auto;
+    padding-bottom: .6rem;
+}
+
 .donation-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -1942,9 +2166,9 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .donation-card {
-    background: var(--white);
+    background: var(--paper);
     border-radius: var(--radius-md);
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--stone-200);
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
@@ -2010,7 +2234,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .donation-notes {
     font-size: .85rem;
-    color: var(--gray-500);
+    color: var(--ash);
     font-style: italic;
 }
 
@@ -2112,7 +2336,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 
 .donation-card-footer {
     padding: 1rem 1.25rem;
-    border-top: 1px solid var(--gray-100);
+    border-top: 1px solid var(--stone-100);
 }
 
 /* ── Modals ────────────────────────────────────────────────────────────────── */
@@ -2128,7 +2352,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .modal-box {
-    background: var(--white);
+    background: var(--paper);
     border-radius: var(--radius-lg);
     padding: 2rem;
     width: 100%;
@@ -2147,11 +2371,11 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     border: none;
     font-size: 1.2rem;
     cursor: pointer;
-    color: var(--gray-500);
+    color: var(--ash);
 }
 
 .modal-close:hover {
-    color: var(--gray-900);
+    color: var(--soil);
 }
 
 .modal-title {
@@ -2199,9 +2423,9 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .wishlist-card {
-    background: var(--white);
+    background: var(--paper);
     border-radius: var(--radius-md);
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--stone-200);
     box-shadow: var(--shadow-sm);
     padding: 1.25rem;
     display: flex;
@@ -2235,7 +2459,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .farmer-search-results {
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--stone-200);
     border-radius: var(--radius-sm);
     max-height: 200px;
     overflow-y: auto;
@@ -2251,7 +2475,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .farmer-search-result:hover {
-    background: var(--green-100);
+    background: var(--sprout-soft);
 }
 
 .selected-farmers {
@@ -2270,7 +2494,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     border: none;
     cursor: pointer;
     margin-left: .25rem;
-    color: var(--gray-500);
+    color: var(--ash);
 }
 
 /* ── Points & Rewards Page ──────────────────────────────────────────────────── */
@@ -2383,29 +2607,32 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     z-index: 4;
 }
 
-/* Tier labels */
+/* Tier thresholds — one coordinate system (the bar) for markers AND labels.
+   bottom % = tier threshold / 3,000-pt bar max (see initPointsRewards). */
+.tier-at-100 {
+    bottom: 100%;
+    /* 3,000 pts */
+}
+
+.tier-at-50 {
+    bottom: 50%;
+    /* 1,500 pts */
+}
+
+.tier-at-1667 {
+    bottom: 16.67%;
+    /* 500 pts */
+}
+
+/* Tier labels hang off the silo's left edge, centered on their notch line */
 .tier-label {
     display: flex;
     align-items: center;
     gap: .6rem;
     position: absolute;
-    left: 0;
-    width: auto;
-    /* hug the left column so text doesn't run under the silo */
-    background: var(--paper);
-    padding-right: .4rem;
-}
-
-.tier-top {
-    top: 0;
-}
-
-.tier-mid {
-    top: 43%;
-}
-
-.tier-low {
-    bottom: 22%;
+    right: calc(100% + .6rem);
+    transform: translateY(50%);
+    white-space: nowrap;
 }
 
 .tier-circle {
@@ -2444,7 +2671,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 .next-tier-hint {
     text-align: center;
     font-size: .85rem;
-    color: var(--gray-500);
+    color: var(--ash);
     margin-top: .5rem;
 }
 
@@ -2468,7 +2695,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 }
 
 .stat-label {
-    color: var(--gray-500);
+    color: var(--ash);
     font-size: .85rem;
     margin-top: .25rem;
 }
@@ -2487,7 +2714,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     gap: 1rem;
     padding: .9rem 1rem;
     border-radius: var(--radius-sm);
-    border: 1.5px solid var(--gray-200);
+    border: 1.5px solid var(--stone-200);
     transition: border-color var(--transition), background var(--transition);
 }
 
@@ -2512,24 +2739,38 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     margin-left: auto;
 }
 
-/* Points history */
+/* Points history — zebra stripes so long ledgers stay scannable */
 .points-history-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: .75rem 0;
-    border-bottom: 1px solid var(--gray-100);
+    padding: .75rem var(--space-3);
+    border-bottom: 1px solid var(--stone-100);
     font-size: .9rem;
+}
+
+.points-history-row:nth-child(even) {
+    background: var(--stone-100);
+    border-radius: var(--radius-sm);
 }
 
 .points-history-row:last-child {
     border-bottom: none;
 }
 
+/* Value wears gold — the headline number on the points page */
+.points-summary-row .stat-card:first-child .stat-value {
+    color: var(--harvest-deep);
+}
+
 .points-hist-pts {
     color: var(--harvest-deep);
     font-size: 1rem;
     font-weight: 600;
+}
+
+.points-hist-desc {
+    margin-left: var(--space-2);
 }
 
 /* (Duplicate .badge / .btn-danger / .btn-secondary blocks removed — canonical
@@ -3266,7 +3507,7 @@ a.btn:hover {
 
 /* Enhancement only: when JS reveals the section, the crate fills upward.
    Default (no JS, reduced motion) is the full crate — content never hidden. */
-.landing.js-reveal .landing-why.reveal.in .impact-vessel-fill {
+.js-reveal .landing-why.reveal.in .impact-vessel-fill {
     animation: harvestFill 1.1s cubic-bezier(.22, .61, .36, 1) both;
 }
 
@@ -3329,7 +3570,17 @@ a.btn:hover {
     color: var(--soil);
 }
 
-/* Footer */
+/* Footer — shared by the landing page and the site-wide shell footer */
+.site-footer {
+    margin-top: auto;
+    /* sticky-footer: sits at the viewport bottom on short pages */
+}
+
+/* The landing page composes its own footer inside the scene — hide the shell's */
+#app.is-landing~.site-footer {
+    display: none;
+}
+
 .landing-footer {
     background: var(--pine-deep);
     color: var(--sprout-soft);
@@ -3374,18 +3625,27 @@ a.btn:hover {
     color: var(--harvest);
 }
 
-/* ── Scroll reveals — progressive enhancement.
-   Content is visible by default; only when app.js adds .landing.js-reveal do
-   the .reveal sections start hidden and animate in on scroll. ─────────────── */
-.landing.js-reveal .reveal {
+/* ── Scroll reveals — progressive enhancement, site-wide.
+   Content is visible by default; only when app.js adds .js-reveal to #app do
+   the .reveal elements start hidden and animate in on scroll/load. ─────────── */
+.js-reveal .reveal {
     opacity: 0;
     transform: translateY(28px);
     transition: opacity .6s ease, transform .6s ease;
 }
 
-.landing.js-reveal .reveal.in {
+.js-reveal .reveal.in {
     opacity: 1;
     transform: none;
+}
+
+/* Short stagger for sibling furniture — state-conveying, not choreography */
+.js-reveal .reveal.reveal-2 {
+    transition-delay: 90ms;
+}
+
+.js-reveal .reveal.reveal-3 {
+    transition-delay: 180ms;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
@@ -3499,14 +3759,29 @@ a.btn:hover {
         animation: none;
     }
 
-    .landing.js-reveal .reveal {
+    .js-reveal .reveal {
         opacity: 1;
         transform: none;
         transition: none;
+        transition-delay: 0s;
     }
 
-    .landing-cta::before {
+    .landing-cta::before,
+    .btn-sweep::before {
         display: none;
+    }
+
+    .farmer-grid>*,
+    .donation-grid>*,
+    .wishlist-grid>* {
+        animation: none;
+    }
+
+    /* Composed static fallback: buttons keep their color states, skip the lift */
+    .btn:hover,
+    .btn-sweep:hover,
+    .landing-cta:hover {
+        transform: none;
     }
 }
 
@@ -3578,10 +3853,10 @@ a.btn:hover {
     border: 1px solid rgba(200, 136, 31, .3);
     background:
         radial-gradient(70% 160% at 95% -30%, rgba(200, 136, 31, .18), transparent 60%),
-        linear-gradient(110deg, var(--sprout-soft), #f7eedb);
+        linear-gradient(110deg, var(--sprout-soft), var(--dawn-cream));
 }
 
-.subpage-cta h3 {
+.subpage-cta .subpage-cta-title {
     font-family: var(--font-display);
     font-size: 1.3rem;
     font-weight: 600;
