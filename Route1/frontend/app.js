@@ -221,7 +221,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260721");
+            const res = await fetch(htmlPath + "?v=20260721b");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -2168,14 +2168,14 @@ const App = {
           </div>`;
 
         return `
-          <div class="card order-card">
+          <div class="card order-card card--lift">
             <div class="order-card-head">
               <h3 class="order-crop">${this._esc(o.crop_name)}</h3>
               ${this._orderStatusBadge(o.status)}
             </div>
             <div class="order-card-body">
               <p>${who}</p>
-              <p><strong>Quantity:</strong> ${qty} × $${Number(o.unit_price).toFixed(2)} = <strong>$${total}</strong></p>
+              <p><strong>Quantity:</strong> <span class="num">${qty}</span> × <span class="num">$${Number(o.unit_price).toFixed(2)}</span> = <strong class="order-total">$${total}</strong></p>
               <p class="order-method">${this._deliveryMethodLabel(o.delivery_method)}</p>
               ${deliv}
             </div>
