@@ -221,7 +221,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260720");
+            const res = await fetch(htmlPath + "?v=20260721");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -1169,6 +1169,14 @@ const App = {
                 });
                 const nameEl = document.getElementById("buyName");
                 if (nameEl && this.user) nameEl.value = this.user.full_name || "";
+                // "Who delivers?" toggles whether the address is required.
+                document.querySelectorAll('input[name="buyMethod"]').forEach(r =>
+                    r.addEventListener("change", () => {
+                        const pickup = document.querySelector('input[name="buyMethod"]:checked')?.value === "consumer_pickup";
+                        document.getElementById("buyAddressReq")?.classList.toggle("hidden", pickup);
+                        const addr = document.getElementById("buyAddress");
+                        if (addr) addr.placeholder = pickup ? "Optional for pickup" : "Street, city, state, ZIP";
+                    }));
                 document.getElementById("sendOrderBtn")
                     ?.addEventListener("click", () => this._sendOrderRequest(id, l));
             }
@@ -1259,11 +1267,19 @@ const App = {
         <p class="buy-total">Estimated total: <strong id="buyTotal">$0.00</strong>
           <span class="muted">($${Number(l.price_per_unit).toFixed(2)} / ${this._esc(l.quantity_unit)})</span></p>
         <div class="form-group">
-          <label for="buyName">Delivery name</label>
-          <input type="text" id="buyName" maxlength="255" placeholder="Who's receiving it" />
+          <span class="form-label">Who delivers?</span>
+          <label class="radio-row"><input type="radio" name="buyMethod" value="farmer_delivers" checked>
+            The farmer delivers to my address</label>
+          <label class="radio-row"><input type="radio" name="buyMethod" value="consumer_pickup">
+            I'll pick up from the farmer${l.can_provide_transport ? "" : " (this farmer may not offer delivery)"}</label>
+          <p class="muted">The farmer confirms this when they approve your request.</p>
         </div>
         <div class="form-group">
-          <label for="buyAddress">Delivery address</label>
+          <label for="buyName">Delivery / contact name</label>
+          <input type="text" id="buyName" maxlength="255" placeholder="Who's receiving it" />
+        </div>
+        <div class="form-group" id="buyAddressGroup">
+          <label for="buyAddress">Delivery address <span id="buyAddressReq" class="req">*</span></label>
           <textarea id="buyAddress" rows="2" placeholder="Street, city, state, ZIP"></textarea>
         </div>
         <div class="form-group">
@@ -2114,17 +2130,25 @@ const App = {
         return `<span class="badge ${cls}">${label}</span>`;
     },
 
+    _deliveryMethodLabel(m) {
+        return m === "consumer_pickup"
+            ? "📦 Buyer picks up from the farmer"
+            : "🚚 Farmer delivers to the buyer";
+    },
+
     _renderOrderCard(o, isFarmer) {
         const total = Number(o.total_amount).toFixed(2);
         const qty = `${Number(o.quantity)} ${this._esc(o.quantity_unit)}`;
+        const pickup = o.delivery_method === "consumer_pickup";
         const who = isFarmer
             ? `<strong>Buyer:</strong> ${this._esc(o.consumer_name || "Consumer #" + o.consumer_id)}`
             : `<strong>Farmer:</strong> ${this._esc(o.farmer_name || "Farmer #" + o.farmer_id)}`;
 
         let actions = "";
         if (isFarmer && o.status === "pending_farmer") {
+            const approveLabel = pickup ? "Approve — buyer picks up" : "Approve — you deliver";
             actions = `
-              <button class="btn btn-primary btn-sm order-approve-btn" data-id="${o.id}">Approve</button>
+              <button class="btn btn-primary btn-sm order-approve-btn" data-id="${o.id}">${approveLabel}</button>
               <button class="btn btn-ghost btn-sm order-decline-btn" data-id="${o.id}">Decline</button>`;
         } else if (!isFarmer && o.status === "approved") {
             actions = `
@@ -2137,7 +2161,7 @@ const App = {
         // Delivery details: the farmer needs them to fulfil; the consumer sees their own.
         const deliv = `
           <div class="order-delivery">
-            <span class="order-delivery-label">Deliver to</span>
+            <span class="order-delivery-label">${pickup ? "Pickup" : "Deliver to"}</span>
             <span>${this._esc(o.delivery_name)} — ${this._esc(o.delivery_address)}</span>
             ${o.delivery_phone ? `<span>📞 ${this._esc(o.delivery_phone)}</span>` : ""}
             ${o.delivery_notes ? `<span>📝 ${this._esc(o.delivery_notes)}</span>` : ""}
@@ -2152,6 +2176,7 @@ const App = {
             <div class="order-card-body">
               <p>${who}</p>
               <p><strong>Quantity:</strong> ${qty} × $${Number(o.unit_price).toFixed(2)} = <strong>$${total}</strong></p>
+              <p class="order-method">${this._deliveryMethodLabel(o.delivery_method)}</p>
               ${deliv}
             </div>
             ${actions ? `<div class="order-card-actions">${actions}</div>` : ""}
@@ -2199,6 +2224,7 @@ const App = {
         const btn = document.getElementById("sendOrderBtn");
         const showErr = (m) => { errEl.textContent = m; errEl.classList.remove("hidden"); };
         const qty = parseFloat(document.getElementById("buyQty").value);
+        const method = document.querySelector('input[name="buyMethod"]:checked')?.value || "farmer_delivers";
         const name = document.getElementById("buyName").value.trim();
         const address = document.getElementById("buyAddress").value.trim();
         const phone = document.getElementById("buyPhone").value.trim();
@@ -2206,8 +2232,8 @@ const App = {
 
         if (!isFinite(qty) || qty <= 0) return showErr("Enter how much you'd like to buy.");
         if (qty > Number(l.quantity_available)) return showErr(`Only ${Number(l.quantity_available)} ${l.quantity_unit} available.`);
-        if (!name) return showErr("Enter a delivery name.");
-        if (!address) return showErr("Enter a delivery address.");
+        if (!name) return showErr("Enter a delivery / contact name.");
+        if (method === "farmer_delivers" && !address) return showErr("Enter a delivery address, or choose pickup instead.");
         errEl.classList.add("hidden");
 
         const orig = btn ? btn.textContent : null;
@@ -2216,8 +2242,9 @@ const App = {
             await this.api("POST", "/orders/", {
                 crop_id: cropId,
                 quantity: qty,
+                delivery_method: method,
                 delivery_name: name,
-                delivery_address: address,
+                delivery_address: address || null,
                 delivery_phone: phone || null,
                 delivery_notes: notes || null,
             });

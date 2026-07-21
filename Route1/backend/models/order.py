@@ -40,6 +40,11 @@ class OrderStatusEnum(str, enum.Enum):
     refunded       = "refunded"        # paid then refunded (future)
 
 
+class DeliveryMethodEnum(str, enum.Enum):
+    farmer_delivers = "farmer_delivers"  # farmer brings it to the delivery address
+    consumer_pickup = "consumer_pickup"  # consumer collects it from the farmer
+
+
 class CropOrder(Base):
     """One consumer's direct purchase of a farmer's crop listing."""
     __tablename__  = "crop_orders"
@@ -62,6 +67,13 @@ class CropOrder(Base):
     delivery_address = Column(Text,        nullable=False)
     delivery_phone   = Column(String(30),  nullable=True)
     delivery_notes   = Column(Text,        nullable=True)
+
+    # Who moves the crop — proposed by the consumer, confirmed by the farmer's approval.
+    delivery_method  = Column(
+        Enum(DeliveryMethodEnum),
+        default=DeliveryMethodEnum.farmer_delivers,
+        nullable=False,
+    )
 
     status = Column(
         Enum(OrderStatusEnum),

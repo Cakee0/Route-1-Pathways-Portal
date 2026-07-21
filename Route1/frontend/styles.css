@@ -3971,3 +3971,33 @@ a.btn:hover {
     font-size: 1.05rem;
     margin: .25rem 0 .75rem;
 }
+
+.order-method {
+    font-weight: 600;
+}
+
+/* "Who delivers?" radio choice in the buy form */
+.form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: .35rem;
+}
+
+.radio-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .3rem 0;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.radio-row input[type="radio"] {
+    width: auto;
+    margin: 0;
+    flex: none;
+}
+
+.req {
+    color: var(--clay, #b5462f);
+}

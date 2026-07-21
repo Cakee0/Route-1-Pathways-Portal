@@ -27,7 +27,7 @@ from database import get_db
 from models import (
     User, UserTypeEnum,
     FarmerCropInventory,
-    CropOrder, OrderStatusEnum,
+    CropOrder, OrderStatusEnum, DeliveryMethodEnum,
 )
 from routers.auth import get_current_user
 from schemas import OrderCreateRequest, OrderResponse, OrderCheckoutResponse
@@ -63,6 +63,13 @@ def _display_name(u: User | None) -> str | None:
     return u.full_name or u.organization_name or None
 
 
+def _method_label(method) -> str:
+    """Human-readable statement of who delivers, for emails."""
+    if method == DeliveryMethodEnum.consumer_pickup:
+        return "The buyer will pick up from the farmer."
+    return "The farmer will deliver to the buyer's address."
+
+
 def _order_response(o: CropOrder) -> OrderResponse:
     return OrderResponse(
         id=o.id,
@@ -77,6 +84,7 @@ def _order_response(o: CropOrder) -> OrderResponse:
         unit_price=float(o.unit_price),
         total_amount=float(o.total_amount),
         currency=o.currency,
+        delivery_method=o.delivery_method,
         delivery_name=o.delivery_name,
         delivery_address=o.delivery_address,
         delivery_phone=o.delivery_phone,
@@ -118,6 +126,14 @@ def create_order(
     unit_price = float(crop.price_per_unit)
     total = round(payload.quantity * unit_price, 2)
 
+    # A delivery address is required when the farmer delivers; for pickup it's
+    # optional (the buyer goes to the farmer), so fall back to a clear default.
+    address = (payload.delivery_address or "").strip()
+    if payload.delivery_method == DeliveryMethodEnum.farmer_delivers and not address:
+        raise HTTPException(status_code=422, detail="A delivery address is required when the farmer delivers.")
+    if not address:
+        address = "Buyer will pick up from the farmer."
+
     order = CropOrder(
         consumer_id=current_user.id,
         farmer_id=crop.farmer_id,
@@ -127,8 +143,9 @@ def create_order(
         unit_price=unit_price,
         total_amount=total,
         currency="usd",
+        delivery_method=payload.delivery_method,
         delivery_name=payload.delivery_name.strip(),
-        delivery_address=payload.delivery_address.strip(),
+        delivery_address=address,
         delivery_phone=(payload.delivery_phone or "").strip() or None,
         delivery_notes=(payload.delivery_notes or "").strip() or None,
         status=OrderStatusEnum.pending_farmer,
@@ -358,6 +375,8 @@ def _notify_farmer_new_order(db: Session, order: CropOrder, crop: FarmerCropInve
             f"New order request on Route 1: {crop.crop_name}",
             f"{buyer} wants to buy {float(order.quantity):g} {order.quantity_unit} of "
             f"{crop.crop_name} for ${float(order.total_amount):.2f}.\n\n"
+            f"Delivery: {_method_label(order.delivery_method)}\n"
+            f"Approving this order confirms you agree to that delivery arrangement.\n\n"
             f"Log in to approve or decline this request:\n{_SITE}/#/orders\n",
         )])
     except Exception:
@@ -374,6 +393,7 @@ def _notify_consumer_decision(db: Session, order: CropOrder, approved: bool) -> 
             body = (
                 f"Good news — the farmer approved your order for {crop_name} "
                 f"(${float(order.total_amount):.2f}).\n\n"
+                f"Delivery: {_method_label(order.delivery_method)}\n\n"
                 f"Log in to pay and complete it:\n{_SITE}/#/orders\n"
             )
         else:
@@ -398,7 +418,8 @@ def _notify_farmer_paid(db: Session, order: CropOrder) -> None:
             f"{_display_name(order.consumer) or 'The buyer'} has paid for "
             f"{float(order.quantity):g} {order.quantity_unit} of {crop_name} "
             f"(${float(order.total_amount):.2f}).\n\n"
-            f"Delivery details:\n{order.delivery_name}\n{order.delivery_address}\n"
+            f"Delivery: {_method_label(order.delivery_method)}\n"
+            f"Details:\n{order.delivery_name}\n{order.delivery_address}\n"
             f"{('Phone: ' + order.delivery_phone) if order.delivery_phone else ''}\n"
             f"{('Notes: ' + order.delivery_notes) if order.delivery_notes else ''}\n\n"
             f"Arrange delivery with the buyer:\n{_SITE}/#/orders\n",

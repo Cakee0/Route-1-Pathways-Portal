@@ -18,7 +18,7 @@ from .donation import (
 )
 from .points import PointsLedger, calculate_points, TIER_THRESHOLDS
 from .notification_prefs import NotificationPreferences
-from .order import CropOrder, OrderStatusEnum
+from .order import CropOrder, OrderStatusEnum, DeliveryMethodEnum
 
 __all__ = [
     # Core auth
@@ -50,4 +50,5 @@ __all__ = [
     # Direct crop orders
     "CropOrder",
     "OrderStatusEnum",
+    "DeliveryMethodEnum",
 ]

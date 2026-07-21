@@ -272,6 +272,11 @@ CREATE TABLE IF NOT EXISTS `crop_orders` (
     `delivery_phone`   VARCHAR(30)   NULL,
     `delivery_notes`   TEXT          NULL,
 
+    -- Who moves the crop. Proposed by the consumer; confirmed when the farmer
+    -- approves the order (or declined if they can't do it).
+    `delivery_method`  ENUM('farmer_delivers','consumer_pickup')
+                       NOT NULL DEFAULT 'farmer_delivers',
+
     `status` ENUM('pending_farmer','approved','paid','declined','cancelled','refunded')
              NOT NULL DEFAULT 'pending_farmer',
 
@@ -299,6 +304,14 @@ CREATE TABLE IF NOT EXISTS `crop_orders` (
 )   ENGINE  = InnoDB
     CHARSET = utf8mb4
     COLLATE = utf8mb4_unicode_ci;
+
+-- v8: record who delivers each order. Added here (after the crop_orders CREATE)
+-- so existing rows get the default; the 1060 duplicate-column error on a fresh
+-- DB (where the CREATE above already added it) is ignored by database.py.
+ALTER TABLE `crop_orders`
+    ADD COLUMN `delivery_method` ENUM('farmer_delivers','consumer_pickup')
+    NOT NULL DEFAULT 'farmer_delivers'
+    AFTER `delivery_notes`;
 
 
 -- =============================================================================
