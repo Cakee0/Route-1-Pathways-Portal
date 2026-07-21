@@ -2562,8 +2562,10 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 1.5rem 0;
+    /* The silo hugs the right edge so the tier labels, which hang off its left,
+       sit inside the card instead of overflowing it. */
+    align-items: flex-end;
+    padding: 1.5rem .75rem 1.5rem 0;
     height: 360px;
     /* definite height so the silo fill's percentage resolves */
 }
@@ -2635,7 +2637,9 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 .tier-marker {
     position: absolute;
     left: 50%;
-    transform: translateX(-50%);
+    /* The 2px border sits above the box's `bottom` edge, so nudge down 1px to
+       put the middle of the notch exactly on the threshold line the labels use. */
+    transform: translate(-50%, 1px);
     width: 38px;
     height: 0;
     border-top: 2px dashed rgba(43, 39, 34, .35);
@@ -3514,64 +3518,58 @@ a.btn:hover {
     color: var(--soil-soft);
 }
 
-/* The crate: pine walls, gold fill risen to the brim */
+/* The third fact keeps the rhythm of the two above it — same separator, same
+   type scale. It earns the gold on the number, plus a meter filled to the brim. */
 .impact-vessel {
-    position: relative;
-    overflow: hidden;
-    height: 150px;
-    border: 3px solid var(--pine);
-    border-radius: var(--radius-sm) var(--radius-sm) var(--radius-md) var(--radius-md);
-    background: var(--harvest-soft);
-    margin-top: .4rem;
-}
-
-.impact-vessel-fill {
-    position: absolute;
-    inset: 0;
-    transform-origin: bottom;
-    background:
-        /* faint slat lines, like a crate filling grain */
-        repeating-linear-gradient(180deg,
-            transparent 0 34px,
-            rgba(43, 39, 34, .08) 34px 36px),
-        linear-gradient(180deg, var(--harvest) 0%, var(--harvest-deep) 100%);
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+    border-top: 1px solid var(--stone-300);
+    padding-top: 1.4rem;
 }
 
 .impact-vessel-copy {
-    position: absolute;
-    inset: auto 1.1rem 1rem 1.1rem;
     display: flex;
     align-items: baseline;
-    gap: .8rem;
+    gap: .9rem;
 }
 
 .impact-vessel-num {
-    font-size: 2.1rem;
+    font-size: 2rem;
     font-weight: 600;
-    color: var(--soil);
+    color: var(--harvest-deep);
     line-height: 1;
+    white-space: nowrap;
 }
 
 .impact-vessel-label {
-    font-size: .92rem;
-    line-height: 1.4;
-    font-weight: 600;
-    color: var(--soil);
+    font-size: .95rem;
+    line-height: 1.45;
+    color: var(--soil-soft);
 }
 
-/* Enhancement only: when JS reveals the section, the crate fills upward.
-   Default (no JS, reduced motion) is the full crate — content never hidden. */
+/* The meter: a full bar of harvest gold — the rescued value, filled to 100% */
+.impact-vessel-fill {
+    order: 2;
+    height: 8px;
+    border-radius: 999px;
+    transform-origin: left center;
+    background: linear-gradient(90deg, var(--harvest) 0%, var(--harvest-deep) 100%);
+}
+
+/* Enhancement only: when JS reveals the section, the meter fills across.
+   Default (no JS, reduced motion) is the full bar — content never hidden. */
 .js-reveal .landing-why.reveal.in .impact-vessel-fill {
     animation: harvestFill 1.1s cubic-bezier(.22, .61, .36, 1) both;
 }
 
 @keyframes harvestFill {
     from {
-        transform: scaleY(.12);
+        transform: scaleX(.06);
     }
 
     to {
-        transform: scaleY(1);
+        transform: scaleX(1);
     }
 }
 
