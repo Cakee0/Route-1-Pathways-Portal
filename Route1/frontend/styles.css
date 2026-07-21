@@ -125,6 +125,10 @@
 html {
     font-size: 16px;
     scroll-behavior: smooth;
+    /* Safety net: never let a stray wide element cause sideways scroll on
+       mobile. `clip` (unlike `hidden`) doesn't create a scroll container, so
+       the sticky header keeps working. */
+    overflow-x: clip;
 }
 
 body {
@@ -1919,14 +1923,45 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
         display: none;
     }
 
+    /* The user group (name chip + Profile + Logout) must be allowed to wrap and
+       shrink, or it overflows the phone width and breaks the whole bar. */
     .header-user {
         margin-left: auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        row-gap: .4rem;
+        min-width: 0;
+    }
+
+    .user-chip {
+        max-width: 44vw;
     }
 }
 
 @media (max-width: 600px) {
     .header-inner {
         padding: .6rem 1rem;
+    }
+
+    /* tighter controls so the chip + two buttons fit a small phone */
+    .header-user {
+        gap: .4rem;
+    }
+
+    .header-user .nav-link {
+        padding: .4rem .55rem;
+    }
+
+    .site-header .btn-sm {
+        padding: 0 .7rem;
+    }
+
+    .user-chip {
+        max-width: 40vw;
+    }
+
+    .page-header {
+        padding: 1rem 1.1rem;
     }
 
     .main-content {
