@@ -220,11 +220,30 @@ UPDATE `users`
     WHERE `user_type` = 'farmer'
       AND (`location_region` IS NULL OR TRIM(`location_region`) = '');
 
+-- v6 (Stripe payments): donations now carry a real Stripe reference and are
+-- confirmed by webhook, not on creation. Add the Stripe columns; each ADD
+-- raises 1060/1061 on re-run, which database.py ignores. Existing `donations`
+-- rows keep NULL Stripe fields and their current status (they predate payments).
+ALTER TABLE `donations`
+    ADD COLUMN `stripe_session_id` VARCHAR(255) NULL
+    AFTER `payment_reference`;
+
+ALTER TABLE `donations`
+    ADD COLUMN `stripe_payment_intent_id` VARCHAR(255) NULL
+    AFTER `stripe_session_id`;
+
+ALTER TABLE `donations`
+    ADD COLUMN `currency` CHAR(3) NOT NULL DEFAULT 'usd'
+    AFTER `amount`;
+
+-- The webhook looks a donation up by its Checkout Session id; index it.
+ALTER TABLE `donations`
+    ADD UNIQUE KEY `uq_don_stripe_session` (`stripe_session_id`);
+
 -- =============================================================================
 -- Future tables (stubs for reference — not created yet)
 -- =============================================================================
 
--- payments : id, buyer_id, seller_id, crop_id, amount, currency, status, created_at
 -- notifications : id, user_id, type ENUM('message','match','system'), payload JSON,
 --                 is_read TINYINT, created_at DATETIME
 -- donor_accounts : id, user_id, preferred_crop_categories VARCHAR(512),

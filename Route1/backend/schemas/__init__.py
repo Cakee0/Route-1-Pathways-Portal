@@ -42,6 +42,7 @@ from .wishlist import (
 from .donations import (
     DonateRequest,
     DonationResponse,
+    CheckoutResponse,
     JoinGroupDonationRequest,
     GroupDonationParticipantResponse,
     GroupDonationResponse,
@@ -75,7 +76,7 @@ __all__ = [
     "FarmerSummary", "GroupDonationSummary",
     "FulfillmentCreate", "FulfillmentResponse",
     # Donations
-    "DonateRequest", "DonationResponse",
+    "DonateRequest", "DonationResponse", "CheckoutResponse",
     "JoinGroupDonationRequest", "GroupDonationParticipantResponse",
     "GroupDonationResponse",
     # Points

@@ -13,3 +13,7 @@ cryptography==44.0.2
 python-multipart==0.0.20
 # Google ID-token verification in routers/auth.py
 httpx==0.28.1
+# Stripe payments (Checkout Sessions + webhook signature verification).
+# Range rather than an exact pin so `uv pip install` resolves the current
+# stable SDK; the v11 API (stripe.checkout.Session, stripe.Webhook) is stable.
+stripe>=11.0,<13.0

@@ -61,6 +61,7 @@ class Donation(Base):
     farmer_id        = Column(Integer,      ForeignKey("users.id"),          nullable=False, index=True)
     wishlist_item_id = Column(Integer,      ForeignKey("wishlist_items.id"), nullable=False, index=True)
     amount           = Column(Numeric(10, 2), nullable=False)
+    currency         = Column(String(3), default="usd", nullable=False)
     status           = Column(
         Enum(DonationStatusEnum),
         default=DonationStatusEnum.pending,
@@ -70,8 +71,12 @@ class Donation(Base):
     # Non-null if participating in a group donation
     group_donation_id = Column(Integer, ForeignKey("group_donations.id"), nullable=True, index=True)
 
-    # Stripe / payment gateway reference (for future real payment integration)
-    payment_reference = Column(String(255), nullable=True)
+    # Stripe references. A donation is created `pending` with a Checkout Session;
+    # the `checkout.session.completed` webhook confirms it and records the
+    # PaymentIntent. `payment_reference` kept for backward compatibility.
+    payment_reference        = Column(String(255), nullable=True)
+    stripe_session_id        = Column(String(255), nullable=True, unique=True)
+    stripe_payment_intent_id = Column(String(255), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

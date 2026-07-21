@@ -143,6 +143,16 @@ const App = {
         const h = location.hash || "#/";
         const loggedIn = !!(this.token && this.user);
 
+        // Stripe redirects the browser back here after hosted checkout. These
+        // screens render directly (no HTML component) and, for success, poll
+        // the donation until the webhook confirms it.
+        if (h.startsWith("#/donation/success")) {
+            return this._renderDonationResult("success", this._hashQuery(h));
+        }
+        if (h.startsWith("#/donation/cancel")) {
+            return this._renderDonationResult("cancel", this._hashQuery(h));
+        }
+
         const listingMatch = h.match(/^#\/listing\/(\d+)$/);
         if (listingMatch) {
             return loggedIn
@@ -1790,15 +1800,20 @@ const App = {
 
     async _submitDonation(itemId) {
         const errEl = document.getElementById("donateError");
+        const btn = document.getElementById("confirmDonateBtn");
         const farmerId = parseInt(document.getElementById("donateSelectFarmer").value);
         const amount = parseFloat(document.getElementById("donateAmount").value);
 
         if (!farmerId || isNaN(amount) || amount <= 0) {
-            errEl.textContent = "Please enter a valid donation amount.";
+            errEl.textContent = "Please enter a valid contribution amount.";
             errEl.classList.remove("hidden");
             return;
         }
         errEl.classList.add("hidden");
+
+        // Guard against a double-submit while the request/redirect is in flight.
+        const origLabel = btn ? btn.textContent : null;
+        if (btn) { btn.disabled = true; btn.textContent = "Redirecting to secure checkout…"; }
 
         try {
             const result = await this.api("POST", "/donations/", {
@@ -1806,14 +1821,12 @@ const App = {
                 farmer_id: farmerId,
                 amount,
             });
-            this._closeModal("donateModal");
-            this._track("donation-completed", true);
-            this.showToast(
-                `Donation confirmed! You earned ${result.points_earned} points 🎯`,
-                "success"
-            );
-            this._loadDonationOpportunities();
+            // Hand off to Stripe's hosted payment page. The donation stays
+            // pending until the webhook confirms it on the /donation/success
+            // screen — do NOT show points or update progress here.
+            window.location.href = result.checkout_url;
         } catch (err) {
+            if (btn) { btn.disabled = false; btn.textContent = origLabel; }
             errEl.textContent = err.message;
             errEl.classList.remove("hidden");
         }
@@ -1849,28 +1862,145 @@ const App = {
 
     async _submitGroupDonation(gdId) {
         const errEl = document.getElementById("groupDonateError");
+        const btn = document.getElementById("confirmGroupDonateBtn");
         const amount = parseFloat(document.getElementById("groupDonateAmount").value);
 
         if (isNaN(amount) || amount <= 0) {
-            errEl.textContent = "Please enter a valid pledge amount.";
+            errEl.textContent = "Please enter a valid contribution amount.";
             errEl.classList.remove("hidden");
             return;
         }
         errEl.classList.add("hidden");
 
+        const origLabel = btn ? btn.textContent : null;
+        if (btn) { btn.disabled = true; btn.textContent = "Redirecting to secure checkout…"; }
+
         try {
-            await this.api("POST", "/donations/group/join", {
+            const result = await this.api("POST", "/donations/group/join", {
                 group_donation_id: gdId,
                 amount,
             });
-            this._closeModal("groupDonateModal");
-            this._track("group-pledge", true);
-            this.showToast("You joined the group donation! Points will be awarded when fully funded. 🎯", "success");
-            this._loadDonationOpportunities();
+            // Charge-at-join: redirect to Stripe. The group's progress updates
+            // only after the webhook confirms payment on /donation/success.
+            window.location.href = result.checkout_url;
         } catch (err) {
+            if (btn) { btn.disabled = false; btn.textContent = origLabel; }
             errEl.textContent = err.message;
             errEl.classList.remove("hidden");
         }
+    },
+
+    // ── Post-checkout result (Stripe redirect target) ─────────────────────────
+
+    // Parse a "?a=b&c=d" query string out of a hash like
+    // "#/donation/success?donation_id=12&kind=individual".
+    _hashQuery(hash) {
+        const params = {};
+        const qi = hash.indexOf("?");
+        if (qi >= 0) {
+            new URLSearchParams(hash.slice(qi + 1)).forEach((v, k) => { params[k] = v; });
+        }
+        return params;
+    },
+
+    _renderDonationResult(kind, params) {
+        // Tear down anything navigate() would (poll timers, the listing map).
+        if (this.messagingPollTimer) { clearInterval(this.messagingPollTimer); this.messagingPollTimer = null; }
+        if (this._listingMap) { this._listingMap.remove(); this._listingMap = null; }
+        this.currentPage = "donation_result";
+
+        const appEl = document.getElementById("app");
+        appEl.classList.remove("is-landing");
+        const backBtn = `<button class="btn btn-primary" id="drHomeBtn">Back to browsing</button>`;
+
+        if (kind === "cancel") {
+            document.title = "Payment canceled — Route 1 Pathways";
+            appEl.innerHTML = `
+        <div class="load-error donation-result">
+          <span style="font-size:2.5rem">🧺</span>
+          <h2>Payment canceled</h2>
+          <p>No charge was made. Your contribution wasn't completed — you can try again whenever you're ready.</p>
+          <div class="load-error-actions">${backBtn}</div>
+        </div>`;
+            document.getElementById("drHomeBtn")
+                ?.addEventListener("click", () => this._navigateToHomeDashboard());
+            return;
+        }
+
+        // success — show a spinner, then poll the donation for webhook confirmation
+        document.title = "Confirming your contribution — Route 1 Pathways";
+        appEl.innerHTML = `
+      <div class="load-error donation-result" id="drCard">
+        <div class="spinner" style="margin:0 auto"></div>
+        <h2>Confirming your contribution…</h2>
+        <p>Hang tight — we're checking with our payment provider. This usually takes just a few seconds.</p>
+      </div>`;
+
+        const donationId = parseInt(params.donation_id, 10);
+        if (!donationId) { this._renderDonationConfirmed(null, params.kind); return; }
+        this._pollDonationConfirmation(donationId)
+            .then(d => this._renderDonationConfirmed(d, params.kind));
+    },
+
+    async _pollDonationConfirmation(donationId) {
+        // Poll for ~25s. The webhook usually confirms within a couple seconds;
+        // if it's slow the "payment received, finalizing" message covers it.
+        const deadline = Date.now() + 25000;
+        let last = null;
+        while (Date.now() < deadline) {
+            try {
+                const d = await this.api("GET", `/donations/${donationId}`);
+                last = d;
+                if (d.status === "confirmed" || d.status === "refunded") return d;
+            } catch {
+                // 401 is handled inside api() (redirects to login); stop polling.
+                return last;
+            }
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        return last;
+    },
+
+    _renderDonationConfirmed(donation, kind) {
+        const card = document.getElementById("drCard");
+        if (!card) return;   // user navigated away (or session expired mid-poll)
+        const backBtn = `<button class="btn btn-primary" id="drHomeBtn">Back to browsing</button>`;
+        const pointsBtn = `<button class="btn btn-secondary" id="drPointsBtn">View my points</button>`;
+
+        if (donation && donation.status === "confirmed") {
+            this._track(kind === "group" ? "group-pledge" : "donation-completed", true);
+            document.title = "Thank you — Route 1 Pathways";
+            const pts = donation.points_earned || 0;
+            const ptsLine = pts > 0
+                ? `<p>You earned <span class="badge badge-amber">+${pts} points</span> 🎯</p>`
+                : "";
+            card.innerHTML = `
+        <span style="font-size:2.5rem">🌾</span>
+        <h2>Thank you for your contribution!</h2>
+        <p>Your payment went through and your contribution is confirmed.</p>
+        ${ptsLine}
+        <div class="load-error-actions">${backBtn}${pts > 0 ? pointsBtn : ""}</div>`;
+            document.getElementById("drPointsBtn")
+                ?.addEventListener("click", () => this.navigate("points_rewards"));
+        } else if (donation && donation.status === "refunded") {
+            document.title = "Contribution refunded — Route 1 Pathways";
+            card.innerHTML = `
+        <span style="font-size:2.5rem">↩️</span>
+        <h2>Contribution refunded</h2>
+        <p>This contribution was refunded. If that's unexpected, please get in touch and we'll help.</p>
+        <div class="load-error-actions">${backBtn}</div>`;
+        } else {
+            // Still pending / timed out — payment likely succeeded but the
+            // webhook hasn't landed yet. Never tell them to pay again.
+            document.title = "Payment received — Route 1 Pathways";
+            card.innerHTML = `
+        <span style="font-size:2.5rem">⏳</span>
+        <h2>Payment received</h2>
+        <p>Thanks! We're still finalizing your contribution — it'll appear in your donation history shortly. There's no need to pay again.</p>
+        <div class="load-error-actions">${backBtn}</div>`;
+        }
+        document.getElementById("drHomeBtn")
+            ?.addEventListener("click", () => this._navigateToHomeDashboard());
     },
 
     /* ═══════════════════════════════════════════════════════════════════════════

@@ -35,6 +35,17 @@ class DonationResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CheckoutResponse(BaseModel):
+    """
+    Returned when a donation (individual or group) is initiated: the frontend
+    redirects the browser to `checkout_url`. The donation is `pending` until
+    the Stripe webhook confirms it — poll GET /donations/{donation_id}.
+    """
+    donation_id:  int
+    checkout_url: str
+    status:       DonationStatusEnum = DonationStatusEnum.pending
+
+
 # ── Group donation join ───────────────────────────────────────────────────────
 
 class JoinGroupDonationRequest(BaseModel):
