@@ -4013,77 +4013,20 @@ a.btn:hover {
    gradients suggest a low sun over rolling hills — pure CSS, no extra markup,
    and static under reduced-motion (only the shared cloud animates). */
 .page-header--showpiece {
-    padding: 1.7rem 1.75rem 2.5rem;
-    min-height: 168px;
-    align-items: flex-start;
+    padding: 2rem 1.75rem 2.4rem;
+    min-height: 132px;
+    align-items: flex-end;
     background:
-        radial-gradient(60% 120% at 84% -10%, rgba(216, 154, 43, .22), transparent 60%),
-        linear-gradient(178deg, #f4efe0 0%, var(--sprout-soft) 55%, #eef2e7 100%);
+        radial-gradient(58% 90% at 82% 6%, rgba(216, 154, 43, .30), transparent 62%),
+        radial-gradient(130% 78% at 18% 122%, rgba(31, 61, 46, .22), transparent 60%),
+        radial-gradient(125% 66% at 80% 126%, rgba(60, 110, 74, .22), transparent 58%),
+        linear-gradient(118deg, var(--sprout-soft) 0%, #eef2e7 45%, var(--dawn-cream) 100%);
 }
 
 .page-header--showpiece h1,
 .page-header--showpiece h2 {
     font-family: var(--font-display);
 }
-
-/* Inline horizon scene behind the title — the landing's ground band, slimmed.
-   Sits below the content (z-0); content keeps z-1 via `.page-header > *`. */
-.ph-scene {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    border-radius: inherit;
-    pointer-events: none;
-}
-
-.ph-scene-svg {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    height: 62%;
-}
-
-.ph-sun {
-    fill: #e8b23e;
-    opacity: .8;
-    animation: phSun 6s ease-in-out infinite;
-}
-
-@keyframes phSun {
-
-    0%,
-    100% {
-        opacity: .62;
-    }
-
-    50% {
-        opacity: .92;
-    }
-}
-
-.ph-hill-far {
-    fill: rgba(31, 61, 46, .28);
-}
-
-/* pine, hazed */
-.ph-hill-mid {
-    fill: rgba(60, 110, 74, .34);
-}
-
-/* field */
-.ph-farm rect,
-.ph-farm path {
-    fill: rgba(43, 39, 34, .40);
-}
-
-/* soil silhouettes */
-.ph-field {
-    fill: rgba(200, 136, 31, .40);
-}
-
-/* the harvest field — scenery, echoing the landing hero */
 
 /* ── Composed empty states: a sunlit medallion over a field wash, not a lone
    emoji. CSS-only upgrade — every existing .empty-state improves for free. */
