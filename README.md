@@ -59,16 +59,26 @@ Full step-by-step (account setup → RDS → EC2 → HTTPS → DNS) is in [`Rout
 - Each wishlist item can be linked to one or more farmers who produce that crop
 - Supports standard individual funding or group-donation mode
 
+### Payments (Stripe)
+- Real card payments via **Stripe Checkout** (hosted page). A contribution/purchase creates a `pending` row and opens a Checkout Session; the browser is redirected to Stripe.
+- The signed **`checkout.session.completed` webhook** (`POST /webhooks/stripe`) is the sole source of truth: it confirms the row, updates funding progress, and awards points — idempotently (row lock + signature verification). The browser redirect is never trusted.
+- **Platform-collected model:** all funds land in one Route 1 Stripe account; farmers are paid out manually. Graceful 503 until `STRIPE_SECRET_KEY` is configured (the rest of the app runs unchanged).
+- Setup + go-live runbook: `OPERATIONS.local.md` §12.
+
 ### Consumer Donation Flow
 - Consumers browse open donation opportunities on a dedicated **Donation Opportunities** tab
-- **Donate Now** modal: choose a linked farmer, enter amount, see projected points before confirming
-- Donations are immediately set to `confirmed` status (Stripe integration point included via `payment_reference` column)
-- Donating updates the wishlist item's `amount_donated` and auto-transitions its status to `funded` when the goal is reached
+- **Contribute** modal: choose a linked farmer, enter amount → redirected to Stripe Checkout
+- On webhook confirmation the wishlist item's `amount_donated` updates and its status auto-transitions to `funded` when the goal is reached; a post-checkout screen polls until the donation shows `confirmed`
 
-### Group Donation
+### Group Donation (charge-at-join)
 - Organisations can flag a wishlist item as a group donation and set a target donor count
-- Consumers join via a **Join Group Donation** modal showing live progress (amount pledged, donors remaining)
-- When the final participant joins and the pledge total meets the goal, all participant donations are confirmed in one transaction and points are awarded to each donor
+- Consumers join via a modal showing live progress; joining **charges immediately** via Stripe and funds the item incrementally (no all-or-nothing escrow, no refund-on-failure)
+
+### Direct Crop Purchases (Orders)
+- Consumers can **buy a crop directly** from a farmer's listing — separate from the donation flow
+- Two-sided flow: consumer sends a purchase **request** (quantity + delivery address + who delivers) → farmer **approves/declines** → consumer **pays** via Stripe → webhook confirms `paid` and decrements inventory
+- **Delivery method** (`farmer_delivers` / `consumer_pickup`) is proposed by the consumer and confirmed by the farmer's approval; captured on the order and stated in notification emails
+- Role-aware **Orders** page (`#/orders`): consumers see their purchases (pay/cancel), farmers see incoming requests (approve/decline)
 
 ### Points & Rewards
 - **Rule:** every $20 donated = 100 points (floor division — $35 → 100 pts, $40 → 200 pts)
@@ -112,8 +122,10 @@ Route1/
 │   │   ├── messaging.py          # POST /messages, GET conversations, PUT read
 │   │   ├── profiles.py           # GET/PATCH /profiles/me, GET/PATCH /profiles/me/notifications
 │   │   ├── wishlist.py           # CRUD /wishlist/, GET /wishlist/mine
-│   │   ├── donations.py          # POST /donations/, /donations/group/join, GET /donations/mine
-│   │   └── points.py             # GET /points/me
+│   │   ├── donations.py          # POST /donations/ + /group/join (Stripe), confirm_paid_donation
+│   │   ├── points.py             # GET /points/me
+│   │   ├── orders.py             # Direct crop purchases: request → approve → pay → confirm
+│   │   └── webhooks.py           # POST /webhooks/stripe (signature-verified confirmations)
 │   ├── utils/
 │   │   └── security.py           # bcrypt + JWT helpers
 │   ├── requirements.txt
@@ -149,10 +161,12 @@ Route1/
 | `wishlist_items` | Org donation opportunities — crop name, quantity, funding target, status |
 | `wishlist_farmer_links` | Many-to-many: which farmers are linked to each wishlist item |
 | `group_donations` | Aggregates co-funding: total required, amount pledged, donor count/goal |
-| `donations` | Individual consumer donations with status and payment reference |
+| `donations` | Individual consumer donations — status + Stripe session/PaymentIntent references |
 | `group_donation_participants` | Per-consumer pledge record within a group donation |
 | `points_ledger` | Immutable points history — one row per confirmed donation |
 | `notification_preferences` | Per-user notification toggles and price-range filters (1-to-1 with users) |
+| `fulfillments` | Recorded deliveries of wishlist items — source of MPCA impact (pounds) metrics |
+| `crop_orders` | Direct crop purchases — quantity, delivery method/address, status, Stripe references |
 
 ---
 
@@ -280,10 +294,26 @@ Query parameters for browse: `crop_type`, `location_region`, `location_city`, `m
 ### Donations
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/donations/` | Consumer | Make an individual donation toward a wishlist item |
-| POST | `/donations/group/join` | Consumer | Pledge to a group donation |
+| POST | `/donations/` | Consumer | Start a contribution → returns a Stripe Checkout URL |
+| POST | `/donations/group/join` | Consumer | Join a group donation (charge-at-join) → Checkout URL |
+| GET | `/donations/{id}` | Consumer | Poll one donation's status (post-checkout screen) |
 | GET | `/donations/group/{gd_id}` | Yes | Get group donation status and participants |
 | GET | `/donations/mine` | Consumer | List own donation history |
+
+### Orders (Direct Crop Purchases)
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/orders/` | Consumer | Send a purchase request (quantity + delivery + method) |
+| GET | `/orders/mine` | Consumer | List own orders |
+| GET | `/orders/incoming` | Farmer | Incoming order requests |
+| POST | `/orders/{id}/approve` \| `/decline` | Farmer | Approve or decline a request |
+| POST | `/orders/{id}/pay` | Consumer | Pay an approved order → Stripe Checkout URL |
+| POST | `/orders/{id}/cancel` | Consumer | Cancel an unpaid order |
+
+### Webhooks
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/webhooks/stripe` | Signature | Stripe payment confirmations (dispatches donation vs order) |
 
 ### Points & Rewards
 | Method | Path | Auth | Description |
@@ -325,15 +355,18 @@ Dropdown values used in registration and browse filters:
 | Backend | Python 3.11, FastAPI 0.111, Uvicorn |
 | ORM | SQLAlchemy 2.0 |
 | Database | AWS RDS MySQL 8.0 (`mysqlRouteOne`) |
-| Auth | JWT (python-jose) + bcrypt (passlib) |
+| Auth | JWT (python-jose) + bcrypt, plus "Sign in with Google" (GIS ID-token) |
+| Payments | Stripe Checkout + webhooks (`stripe` SDK); platform-collected |
+| Email | AWS SES (SMTP) for donation/order notifications |
 
 ---
 
 ## Roadmap
 
+- [x] **Stripe payments** — Checkout + webhook-confirmed donations, group charge-at-join, and direct crop purchases
+- [x] **Email notifications** via AWS SES (donation/order alerts; log-only until SES is configured)
+- [x] **Map view** for nearby farmers on the listing-detail page (Leaflet + OSM, MN-scoped)
+- [ ] Go live on Stripe (activate account + swap in live keys — see `OPERATIONS.local.md` §12)
 - [ ] WebSocket real-time messaging (replace polling)
-- [ ] Email / push notifications via AWS SES (notification preference hooks already in place)
-- [ ] Stripe payment gateway integration (`payment_reference` column ready in `donations` table)
-- [ ] Admin dashboard — fulfillment tracking, user management
-- [ ] Map view for nearby farmers (Minnesota-scoped)
+- [ ] In-app refunds + admin dashboard (fulfillment tracking, user management)
 - [ ] Reward redemption catalogue for accumulated points
