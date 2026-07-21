@@ -241,6 +241,67 @@ ALTER TABLE `donations`
     ADD UNIQUE KEY `uq_don_stripe_session` (`stripe_session_id`);
 
 -- =============================================================================
+-- Table 12 : crop_orders  (v7 — direct consumer purchase of a crop listing)
+--
+-- Distinct from donations. A consumer requests a quantity + delivery address;
+-- the farmer approves; the consumer then pays via Stripe. Money is platform-
+-- collected (farmer paid out manually). No points are awarded for purchases.
+--
+-- Status lifecycle:
+--   pending_farmer → approved → paid
+--                  ↘ declined            (farmer said no)
+--   pending_farmer/approved → cancelled  (consumer backed out before paying)
+--   paid → refunded                      (future)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `crop_orders` (
+    `id`               INT           NOT NULL AUTO_INCREMENT,
+    `consumer_id`      INT           NOT NULL,
+    `farmer_id`        INT           NOT NULL,
+    `crop_id`          INT           NOT NULL,
+
+    -- Snapshot at request time (the listing may change afterwards).
+    `quantity`         DECIMAL(10,2) NOT NULL,
+    `quantity_unit`    VARCHAR(50)   NOT NULL DEFAULT 'lbs',
+    `unit_price`       DECIMAL(10,2) NOT NULL,
+    `total_amount`     DECIMAL(10,2) NOT NULL,
+    `currency`         CHAR(3)       NOT NULL DEFAULT 'usd',
+
+    -- Delivery details captured at request time.
+    `delivery_name`    VARCHAR(255)  NOT NULL,
+    `delivery_address` TEXT          NOT NULL,
+    `delivery_phone`   VARCHAR(30)   NULL,
+    `delivery_notes`   TEXT          NULL,
+
+    `status` ENUM('pending_farmer','approved','paid','declined','cancelled','refunded')
+             NOT NULL DEFAULT 'pending_farmer',
+
+    -- Stripe references (set when the consumer pays after approval).
+    `stripe_session_id`        VARCHAR(255) NULL,
+    `stripe_payment_intent_id` VARCHAR(255) NULL,
+
+    `created_at`       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                     ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_order_stripe_session` (`stripe_session_id`),
+    KEY `ix_order_consumer` (`consumer_id`),
+    KEY `ix_order_farmer`   (`farmer_id`),
+    KEY `ix_order_crop`     (`crop_id`),
+    KEY `ix_order_status`   (`status`),
+
+    CONSTRAINT `fk_order_consumer`
+        FOREIGN KEY (`consumer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_order_farmer`
+        FOREIGN KEY (`farmer_id`)   REFERENCES `users` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_order_crop`
+        FOREIGN KEY (`crop_id`) REFERENCES `farmer_crop_inventory` (`id`) ON DELETE CASCADE
+)   ENGINE  = InnoDB
+    CHARSET = utf8mb4
+    COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
 -- Future tables (stubs for reference — not created yet)
 -- =============================================================================
 

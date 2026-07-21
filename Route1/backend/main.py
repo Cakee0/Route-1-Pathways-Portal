@@ -20,6 +20,7 @@ from routers.profiles import router as profiles_router
 from routers.wishlist import router as wishlist_router
 from routers.donations import router as donations_router
 from routers.points import router as points_router
+from routers.orders import router as orders_router
 from routers.webhooks import router as webhooks_router
 
 logging.basicConfig(level=logging.INFO)
@@ -82,6 +83,7 @@ app.include_router(profiles_router)
 app.include_router(wishlist_router)
 app.include_router(donations_router)
 app.include_router(points_router)
+app.include_router(orders_router)
 app.include_router(webhooks_router)
 
 

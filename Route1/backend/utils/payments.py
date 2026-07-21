@@ -68,6 +68,55 @@ def _cancel_url() -> str:
     return os.getenv("CHECKOUT_CANCEL_URL", "https://route1pathways.app/#/donation/cancel")
 
 
+def _site_base() -> str:
+    """Origin of the SPA, derived from CHECKOUT_SUCCESS_URL (e.g. https://route1pathways.app)."""
+    url = os.getenv("CHECKOUT_SUCCESS_URL", "https://route1pathways.app/#/donation/success")
+    return url.split("/#/")[0] or "https://route1pathways.app"
+
+
+def _create_session(
+    *,
+    ref_id: int,
+    amount: float,
+    currency: str,
+    product_name: str,
+    description: str,
+    metadata: dict,
+    success_url: str,
+    cancel_url: str,
+    customer_email: str | None = None,
+) -> "stripe.checkout.Session":
+    """
+    Shared Checkout Session builder for every payment flow (donations, orders).
+    Raises stripe.error.StripeError on failure; callers roll back their pending
+    row so no orphan is left behind.
+    """
+    _apply_key()
+    unit_amount = int(round(amount * 100))  # Stripe uses the smallest unit (cents)
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        client_reference_id=str(ref_id),
+        customer_email=customer_email or None,
+        line_items=[
+            {
+                "quantity": 1,
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": unit_amount,
+                    "product_data": {"name": product_name, "description": description},
+                },
+            }
+        ],
+        metadata=metadata,
+        # Same metadata on the PaymentIntent so refunds/disputes in the Stripe
+        # dashboard trace back to the originating row.
+        payment_intent_data={"metadata": metadata},
+        success_url=success_url,
+        cancel_url=cancel_url,
+    )
+    return session
+
+
 def create_checkout_session(
     *,
     donation_id: int,
@@ -79,48 +128,62 @@ def create_checkout_session(
     customer_email: str | None = None,
 ) -> "stripe.checkout.Session":
     """
-    Open a hosted Checkout Session for one donation.
-
-    `kind` is "individual" or "group" — echoed in metadata so the webhook can
-    tell the two flows apart. Raises stripe.error.StripeError on failure; the
-    caller rolls back the pending donation so no orphaned row is left behind.
+    Open a hosted Checkout Session for one donation. `kind` is "individual" or
+    "group" — echoed in metadata so the webhook can tell the flows apart.
     """
-    _apply_key()
-
-    # Stripe works in the smallest currency unit (cents for USD).
-    unit_amount = int(round(amount * 100))
     metadata = {"donation_id": str(donation_id), "kind": kind}
-
     # kind lets the post-checkout page fire the right analytics event.
     success_url = _success_url().replace("{DONATION_ID}", str(donation_id)) + f"&kind={kind}"
-
-    session = stripe.checkout.Session.create(
-        mode="payment",
-        client_reference_id=str(donation_id),
-        customer_email=customer_email or None,
-        line_items=[
-            {
-                "quantity": 1,
-                "price_data": {
-                    "currency": currency,
-                    "unit_amount": unit_amount,
-                    "product_data": {
-                        "name": f"Contribution — {crop_name}",
-                        "description": f"Funds {crop_name} for {org_name} via Route 1",
-                    },
-                },
-            }
-        ],
+    session = _create_session(
+        ref_id=donation_id,
+        amount=amount,
+        currency=currency,
+        product_name=f"Contribution — {crop_name}",
+        description=f"Funds {crop_name} for {org_name} via Route 1",
         metadata=metadata,
-        # Carry the same metadata onto the PaymentIntent so refunds / disputes
-        # in the Stripe dashboard trace back to the donation.
-        payment_intent_data={"metadata": metadata},
         success_url=success_url,
         cancel_url=_cancel_url(),
+        customer_email=customer_email,
     )
     logger.info(
         "Stripe Checkout Session %s opened for donation_id=%s ($%.2f %s, kind=%s)",
         session.id, donation_id, amount, currency, kind,
+    )
+    return session
+
+
+def create_order_checkout_session(
+    *,
+    order_id: int,
+    amount: float,
+    currency: str,
+    crop_name: str,
+    quantity: float,
+    unit: str,
+    farmer_name: str,
+    customer_email: str | None = None,
+) -> "stripe.checkout.Session":
+    """Open a hosted Checkout Session for a direct crop purchase (metadata kind='order')."""
+    metadata = {"order_id": str(order_id), "kind": "order"}
+    success_url = (
+        f"{_site_base()}/#/order/success"
+        f"?order_id={order_id}&session_id={{CHECKOUT_SESSION_ID}}"
+    )
+    cancel_url = f"{_site_base()}/#/order/cancel"
+    session = _create_session(
+        ref_id=order_id,
+        amount=amount,
+        currency=currency,
+        product_name=f"{crop_name} — {quantity:g} {unit}",
+        description=f"Purchase from {farmer_name} via Route 1",
+        metadata=metadata,
+        success_url=success_url,
+        cancel_url=cancel_url,
+        customer_email=customer_email,
+    )
+    logger.info(
+        "Stripe Checkout Session %s opened for order_id=%s ($%.2f %s)",
+        session.id, order_id, amount, currency,
     )
     return session
 

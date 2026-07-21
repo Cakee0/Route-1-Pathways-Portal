@@ -58,6 +58,11 @@ from .notifications import (
     ProfileUpdateRequest,
     ProfileUpdateResponse,
 )
+from .orders import (
+    OrderCreateRequest,
+    OrderResponse,
+    OrderCheckoutResponse,
+)
 
 __all__ = [
     # Auth
@@ -84,4 +89,6 @@ __all__ = [
     # Notifications / Profile
     "NotificationPrefsUpdate", "NotificationPrefsResponse",
     "ProfileUpdateRequest", "ProfileUpdateResponse",
+    # Direct crop orders
+    "OrderCreateRequest", "OrderResponse", "OrderCheckoutResponse",
 ]

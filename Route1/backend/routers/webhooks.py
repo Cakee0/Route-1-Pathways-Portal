@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from routers.donations import confirm_paid_donation
+from routers.orders import confirm_paid_order
 from utils import payments
 
 logger = logging.getLogger(__name__)
@@ -70,16 +71,30 @@ async def stripe_webhook(
                     session.get("id"), session.get("payment_status"))
         return {"received": True, "handled": False}
 
-    donation_id = _extract_donation_id(session)
+    payment_intent_id = session.get("payment_intent")
+    if isinstance(payment_intent_id, dict):  # if expanded
+        payment_intent_id = payment_intent_id.get("id")
+
+    meta = session.get("metadata") or {}
+    kind = meta.get("kind")
+
+    # Dispatch by flow: "order" is a direct crop purchase; anything else
+    # ("individual"/"group"/legacy) is a donation.
+    if kind == "order":
+        order_id = _extract_int(meta.get("order_id") or session.get("client_reference_id"))
+        if order_id is None:
+            logger.error("Stripe webhook: paid order session %s has no order_id.", session.get("id"))
+            return {"received": True, "handled": False}
+        confirm_paid_order(db, order_id, payment_intent_id)
+        logger.info("Stripe webhook: confirmed order_id=%s from session %s", order_id, session.get("id"))
+        return {"received": True, "handled": True}
+
+    donation_id = _extract_int(meta.get("donation_id") or session.get("client_reference_id"))
     if donation_id is None:
         logger.error("Stripe webhook: paid session %s has no donation_id — cannot confirm.",
                      session.get("id"))
         # 200 so Stripe doesn't retry forever; this needs manual investigation.
         return {"received": True, "handled": False}
-
-    payment_intent_id = session.get("payment_intent")
-    if isinstance(payment_intent_id, dict):  # if expanded
-        payment_intent_id = payment_intent_id.get("id")
 
     confirm_paid_donation(db, donation_id, payment_intent_id)
     logger.info("Stripe webhook: confirmed donation_id=%s from session %s",
@@ -87,10 +102,7 @@ async def stripe_webhook(
     return {"received": True, "handled": True}
 
 
-def _extract_donation_id(session) -> int | None:
-    """donation_id lives in session.metadata; client_reference_id is a fallback."""
-    meta = session.get("metadata") or {}
-    raw = meta.get("donation_id") or session.get("client_reference_id")
+def _extract_int(raw) -> int | None:
     try:
         return int(raw) if raw is not None else None
     except (TypeError, ValueError):

@@ -135,6 +135,7 @@ const App = {
             profile_settings: "#/profile",
             points_rewards: "#/points",
             wishlist_manage: "#/wishlist",
+            orders: "#/orders",
         };
         return map[page] || "#/";
     },
@@ -151,6 +152,15 @@ const App = {
         }
         if (h.startsWith("#/donation/cancel")) {
             return this._renderDonationResult("cancel", this._hashQuery(h));
+        }
+        if (h.startsWith("#/order/success")) {
+            return this._renderOrderResult("success", this._hashQuery(h));
+        }
+        if (h.startsWith("#/order/cancel")) {
+            return this._renderOrderResult("cancel", this._hashQuery(h));
+        }
+        if (h === "#/orders") {
+            return loggedIn ? this.navigate("orders") : this.navigate("login");
         }
 
         const listingMatch = h.match(/^#\/listing\/(\d+)$/);
@@ -201,6 +211,7 @@ const App = {
             profile_settings: "components/profile_settings.html",
             points_rewards: "components/points_rewards.html",
             wishlist_manage: "components/wishlist_manage.html",
+            orders: "components/orders.html",
         };
 
         const htmlPath = componentMap[page];
@@ -210,7 +221,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260711");
+            const res = await fetch(htmlPath + "?v=20260720");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -248,6 +259,7 @@ const App = {
             profile_settings: "Profile settings — Route 1 Pathways",
             points_rewards: "My points — Route 1 Pathways",
             wishlist_manage: "Wishlist — Route 1 Pathways",
+            orders: "Orders — Route 1 Pathways",
         };
         document.title = opts.register
             ? "Create your free account — Route 1 Pathways"
@@ -270,6 +282,7 @@ const App = {
             profile_settings: () => this.initProfileSettings(),
             points_rewards: () => this.initPointsRewards(),
             wishlist_manage: () => this.initWishlistManage(),
+            orders: () => this.initOrders(),
         };
         inits[page]?.();
 
@@ -397,8 +410,11 @@ const App = {
         const extraLinks = this.user.user_type === "organization"
             ? `<button class="nav-link" data-page="wishlist_manage">Wishlist</button>`
             : this.user.user_type === "consumer"
-                ? `<button class="nav-link" data-page="points_rewards">My Points</button>`
-                : "";
+                ? `<button class="nav-link" data-page="points_rewards">My Points</button>
+                   <button class="nav-link" data-page="orders">Orders</button>`
+                : this.user.user_type === "farmer"
+                    ? `<button class="nav-link" data-page="orders">Orders</button>`
+                    : "";
 
         header.innerHTML = `
       <div class="header-inner">
@@ -1142,6 +1158,21 @@ const App = {
                 this.navigate("messaging");
             });
 
+            // Buy form (consumers only; rendered only when the crop is priced + in stock)
+            const buyQty = document.getElementById("buyQty");
+            if (buyQty) {
+                const price = Number(l.price_per_unit);
+                const totalEl = document.getElementById("buyTotal");
+                buyQty.addEventListener("input", () => {
+                    const q = parseFloat(buyQty.value);
+                    totalEl.textContent = "$" + (isFinite(q) && q > 0 ? (q * price).toFixed(2) : "0.00");
+                });
+                const nameEl = document.getElementById("buyName");
+                if (nameEl && this.user) nameEl.value = this.user.full_name || "";
+                document.getElementById("sendOrderBtn")
+                    ?.addEventListener("click", () => this._sendOrderRequest(id, l));
+            }
+
             // Fill in the map beside the listing (not awaited — the page is
             // already usable; the panel stays hidden if the map can't load)
             this._initListingMap(l);
@@ -1215,7 +1246,39 @@ const App = {
         <div class="listing-detail-actions">
           <button class="btn btn-primary" id="msgFarmerBtn">💬 Message Farmer</button>
         </div>
-      </div>`;
+      </div>
+
+      ${this.user?.user_type === "consumer" && l.price_per_unit != null && Number(l.quantity_available) > 0 ? `
+      <div class="card" id="buyCard">
+        <h3 class="listing-farmer-heading">Buy this crop</h3>
+        <p class="muted">Send a purchase request. The farmer approves it, then you pay securely by card — you'll arrange delivery together.</p>
+        <div class="form-group">
+          <label for="buyQty">Quantity in ${this._esc(l.quantity_unit)} (up to ${Number(l.quantity_available)})</label>
+          <input type="number" id="buyQty" min="0.01" step="0.01" max="${Number(l.quantity_available)}" placeholder="e.g. 10" />
+        </div>
+        <p class="buy-total">Estimated total: <strong id="buyTotal">$0.00</strong>
+          <span class="muted">($${Number(l.price_per_unit).toFixed(2)} / ${this._esc(l.quantity_unit)})</span></p>
+        <div class="form-group">
+          <label for="buyName">Delivery name</label>
+          <input type="text" id="buyName" maxlength="255" placeholder="Who's receiving it" />
+        </div>
+        <div class="form-group">
+          <label for="buyAddress">Delivery address</label>
+          <textarea id="buyAddress" rows="2" placeholder="Street, city, state, ZIP"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="buyPhone">Phone (optional)</label>
+          <input type="tel" id="buyPhone" maxlength="30" placeholder="For delivery coordination" />
+        </div>
+        <div class="form-group">
+          <label for="buyNotes">Notes (optional)</label>
+          <textarea id="buyNotes" rows="2" placeholder="Delivery instructions, preferred times, etc."></textarea>
+        </div>
+        <p class="error-msg hidden" role="alert" id="buyError"></p>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="sendOrderBtn">Send purchase request</button>
+        </div>
+      </div>` : ""}`;
     },
 
     /* ── Listing-detail map ──────────────────────────────────────────────────
@@ -2001,6 +2064,242 @@ const App = {
         }
         document.getElementById("drHomeBtn")
             ?.addEventListener("click", () => this._navigateToHomeDashboard());
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       PAGE: ORDERS (direct crop purchases)
+       Consumers see their purchases; farmers see incoming requests to approve.
+       ═══════════════════════════════════════════════════════════════════════════ */
+    async initOrders() {
+        const isFarmer = this.user?.user_type === "farmer";
+        const title = document.getElementById("ordersTitle");
+        const subtitle = document.getElementById("ordersSubtitle");
+        const loading = document.getElementById("ordersLoading");
+        const empty = document.getElementById("ordersEmpty");
+        const emptyText = document.getElementById("ordersEmptyText");
+        const list = document.getElementById("ordersList");
+
+        if (title) title.textContent = isFarmer ? "Incoming Orders" : "My Purchases";
+        if (subtitle) subtitle.textContent = isFarmer
+            ? "Buyers requesting your crops — approve or decline, then they pay"
+            : "Crops you've ordered from farmers";
+        if (emptyText) emptyText.textContent = isFarmer
+            ? "No incoming orders yet. When a buyer requests one of your crops, it shows up here."
+            : "You haven't ordered any crops yet. Open a listing and send a purchase request.";
+
+        try {
+            const orders = await this.api("GET", isFarmer ? "/orders/incoming" : "/orders/mine");
+            loading.classList.add("hidden");
+            if (!orders.length) { empty.classList.remove("hidden"); return; }
+            list.classList.remove("hidden");
+            list.innerHTML = orders.map(o => this._renderOrderCard(o, isFarmer)).join("");
+            this._wireOrderActions(list, isFarmer);
+        } catch (err) {
+            loading.classList.add("hidden");
+            empty.classList.remove("hidden");
+            if (emptyText) emptyText.textContent = `Couldn't load orders: ${err.message}`;
+        }
+    },
+
+    _orderStatusBadge(status) {
+        const map = {
+            pending_farmer: ["badge-gray", "⏳ Awaiting farmer"],
+            approved:       ["badge-amber", "✅ Approved — pay now"],
+            paid:           ["badge-green", "💳 Paid"],
+            declined:       ["badge-gray", "✖ Declined"],
+            cancelled:      ["badge-gray", "✖ Cancelled"],
+            refunded:       ["badge-gray", "↩ Refunded"],
+        };
+        const [cls, label] = map[status] || ["badge-gray", status];
+        return `<span class="badge ${cls}">${label}</span>`;
+    },
+
+    _renderOrderCard(o, isFarmer) {
+        const total = Number(o.total_amount).toFixed(2);
+        const qty = `${Number(o.quantity)} ${this._esc(o.quantity_unit)}`;
+        const who = isFarmer
+            ? `<strong>Buyer:</strong> ${this._esc(o.consumer_name || "Consumer #" + o.consumer_id)}`
+            : `<strong>Farmer:</strong> ${this._esc(o.farmer_name || "Farmer #" + o.farmer_id)}`;
+
+        let actions = "";
+        if (isFarmer && o.status === "pending_farmer") {
+            actions = `
+              <button class="btn btn-primary btn-sm order-approve-btn" data-id="${o.id}">Approve</button>
+              <button class="btn btn-ghost btn-sm order-decline-btn" data-id="${o.id}">Decline</button>`;
+        } else if (!isFarmer && o.status === "approved") {
+            actions = `
+              <button class="btn btn-primary btn-sm order-pay-btn" data-id="${o.id}">Pay $${total} — secure checkout</button>
+              <button class="btn btn-ghost btn-sm order-cancel-btn" data-id="${o.id}">Cancel</button>`;
+        } else if (!isFarmer && o.status === "pending_farmer") {
+            actions = `<button class="btn btn-ghost btn-sm order-cancel-btn" data-id="${o.id}">Cancel request</button>`;
+        }
+
+        // Delivery details: the farmer needs them to fulfil; the consumer sees their own.
+        const deliv = `
+          <div class="order-delivery">
+            <span class="order-delivery-label">Deliver to</span>
+            <span>${this._esc(o.delivery_name)} — ${this._esc(o.delivery_address)}</span>
+            ${o.delivery_phone ? `<span>📞 ${this._esc(o.delivery_phone)}</span>` : ""}
+            ${o.delivery_notes ? `<span>📝 ${this._esc(o.delivery_notes)}</span>` : ""}
+          </div>`;
+
+        return `
+          <div class="card order-card">
+            <div class="order-card-head">
+              <h3 class="order-crop">${this._esc(o.crop_name)}</h3>
+              ${this._orderStatusBadge(o.status)}
+            </div>
+            <div class="order-card-body">
+              <p>${who}</p>
+              <p><strong>Quantity:</strong> ${qty} × $${Number(o.unit_price).toFixed(2)} = <strong>$${total}</strong></p>
+              ${deliv}
+            </div>
+            ${actions ? `<div class="order-card-actions">${actions}</div>` : ""}
+          </div>`;
+    },
+
+    _wireOrderActions(list, isFarmer) {
+        list.querySelectorAll(".order-approve-btn").forEach(b =>
+            b.addEventListener("click", () => this._orderAction(b.dataset.id, "approve")));
+        list.querySelectorAll(".order-decline-btn").forEach(b =>
+            b.addEventListener("click", () => this._orderAction(b.dataset.id, "decline")));
+        list.querySelectorAll(".order-cancel-btn").forEach(b =>
+            b.addEventListener("click", () => this._orderAction(b.dataset.id, "cancel")));
+        list.querySelectorAll(".order-pay-btn").forEach(b =>
+            b.addEventListener("click", () => this._payOrder(b.dataset.id, b)));
+    },
+
+    async _orderAction(orderId, action) {
+        if (action === "decline" && !confirm("Decline this order? The buyer is notified and not charged.")) return;
+        if (action === "cancel" && !confirm("Cancel this order?")) return;
+        try {
+            await this.api("POST", `/orders/${orderId}/${action}`);
+            this.showToast(`Order ${action === "approve" ? "approved" : action + "led"}.`, "success");
+            this.initOrders();
+        } catch (err) {
+            this.showToast(err.message, "error");
+        }
+    },
+
+    async _payOrder(orderId, btn) {
+        const orig = btn ? btn.textContent : null;
+        if (btn) { btn.disabled = true; btn.textContent = "Redirecting to secure checkout…"; }
+        try {
+            const result = await this.api("POST", `/orders/${orderId}/pay`);
+            window.location.href = result.checkout_url;
+        } catch (err) {
+            if (btn) { btn.disabled = false; btn.textContent = orig; }
+            this.showToast(err.message, "error");
+        }
+    },
+
+    // Purchase request from the listing-detail buy form.
+    async _sendOrderRequest(cropId, l) {
+        const errEl = document.getElementById("buyError");
+        const btn = document.getElementById("sendOrderBtn");
+        const showErr = (m) => { errEl.textContent = m; errEl.classList.remove("hidden"); };
+        const qty = parseFloat(document.getElementById("buyQty").value);
+        const name = document.getElementById("buyName").value.trim();
+        const address = document.getElementById("buyAddress").value.trim();
+        const phone = document.getElementById("buyPhone").value.trim();
+        const notes = document.getElementById("buyNotes").value.trim();
+
+        if (!isFinite(qty) || qty <= 0) return showErr("Enter how much you'd like to buy.");
+        if (qty > Number(l.quantity_available)) return showErr(`Only ${Number(l.quantity_available)} ${l.quantity_unit} available.`);
+        if (!name) return showErr("Enter a delivery name.");
+        if (!address) return showErr("Enter a delivery address.");
+        errEl.classList.add("hidden");
+
+        const orig = btn ? btn.textContent : null;
+        if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+        try {
+            await this.api("POST", "/orders/", {
+                crop_id: cropId,
+                quantity: qty,
+                delivery_name: name,
+                delivery_address: address,
+                delivery_phone: phone || null,
+                delivery_notes: notes || null,
+            });
+            this.showToast("Purchase request sent! The farmer will review it. 🌾", "success");
+            this.navigate("orders");
+        } catch (err) {
+            if (btn) { btn.disabled = false; btn.textContent = orig; }
+            showErr(err.message);
+        }
+    },
+
+    // ── Post-checkout result for orders (Stripe redirect target) ──────────────
+
+    _renderOrderResult(kind, params) {
+        if (this.messagingPollTimer) { clearInterval(this.messagingPollTimer); this.messagingPollTimer = null; }
+        if (this._listingMap) { this._listingMap.remove(); this._listingMap = null; }
+        this.currentPage = "order_result";
+        const appEl = document.getElementById("app");
+        appEl.classList.remove("is-landing");
+        const ordersBtn = `<button class="btn btn-primary" id="orHomeBtn">Go to my orders</button>`;
+
+        if (kind === "cancel") {
+            document.title = "Payment canceled — Route 1 Pathways";
+            appEl.innerHTML = `
+        <div class="load-error donation-result">
+          <span style="font-size:2.5rem">🧺</span>
+          <h2>Payment canceled</h2>
+          <p>No charge was made. Your order is still approved and waiting — you can pay it any time from your orders.</p>
+          <div class="load-error-actions">${ordersBtn}</div>
+        </div>`;
+            document.getElementById("orHomeBtn")?.addEventListener("click", () => this.navigate("orders"));
+            return;
+        }
+
+        document.title = "Confirming your order — Route 1 Pathways";
+        appEl.innerHTML = `
+      <div class="load-error donation-result" id="orCard">
+        <div class="spinner" style="margin:0 auto"></div>
+        <h2>Confirming your payment…</h2>
+        <p>Hang tight — we're checking with our payment provider. This usually takes just a few seconds.</p>
+      </div>`;
+
+        const orderId = parseInt(params.order_id, 10);
+        if (!orderId) { this._renderOrderConfirmed(null); return; }
+        this._pollOrderConfirmation(orderId).then(o => this._renderOrderConfirmed(o));
+    },
+
+    async _pollOrderConfirmation(orderId) {
+        const deadline = Date.now() + 25000;
+        let last = null;
+        while (Date.now() < deadline) {
+            try {
+                const o = await this.api("GET", `/orders/${orderId}`);
+                last = o;
+                if (o.status === "paid" || o.status === "refunded") return o;
+            } catch { return last; }
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        return last;
+    },
+
+    _renderOrderConfirmed(order) {
+        const card = document.getElementById("orCard");
+        if (!card) return;
+        const ordersBtn = `<button class="btn btn-primary" id="orHomeBtn">Go to my orders</button>`;
+        if (order && order.status === "paid") {
+            this._track("order-paid", true);
+            document.title = "Order confirmed — Route 1 Pathways";
+            card.innerHTML = `
+        <span style="font-size:2.5rem">🌾</span>
+        <h2>Order confirmed!</h2>
+        <p>Your payment went through. The farmer has your delivery details and will be in touch to arrange delivery.</p>
+        <div class="load-error-actions">${ordersBtn}</div>`;
+        } else {
+            document.title = "Payment received — Route 1 Pathways";
+            card.innerHTML = `
+        <span style="font-size:2.5rem">⏳</span>
+        <h2>Payment received</h2>
+        <p>Thanks! We're still finalizing your order — it'll show as paid in your orders shortly. There's no need to pay again.</p>
+        <div class="load-error-actions">${ordersBtn}</div>`;
+        }
+        document.getElementById("orHomeBtn")?.addEventListener("click", () => this.navigate("orders"));
     },
 
     /* ═══════════════════════════════════════════════════════════════════════════

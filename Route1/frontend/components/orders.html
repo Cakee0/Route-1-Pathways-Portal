@@ -1,0 +1,25 @@
+<!-- components/orders.html — Direct crop orders (#/orders)
+     Consumers see their purchases; farmers see incoming requests to approve. -->
+
+<div class="dashboard orders-page">
+
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title" id="ordersTitle">Orders</h1>
+            <p class="page-subtitle" id="ordersSubtitle">Your crop purchases</p>
+        </div>
+    </div>
+
+    <div class="loading-state" id="ordersLoading">
+        <div class="spinner"></div>
+        <p>Loading orders…</p>
+    </div>
+
+    <div class="empty-state hidden" id="ordersEmpty">
+        <span>📦</span>
+        <p id="ordersEmptyText">You don't have any orders yet.</p>
+    </div>
+
+    <div id="ordersList" class="orders-list hidden"></div>
+
+</div>

@@ -18,6 +18,7 @@ from .donation import (
 )
 from .points import PointsLedger, calculate_points, TIER_THRESHOLDS
 from .notification_prefs import NotificationPreferences
+from .order import CropOrder, OrderStatusEnum
 
 __all__ = [
     # Core auth
@@ -46,4 +47,7 @@ __all__ = [
     "TIER_THRESHOLDS",
     # Notifications
     "NotificationPreferences",
+    # Direct crop orders
+    "CropOrder",
+    "OrderStatusEnum",
 ]

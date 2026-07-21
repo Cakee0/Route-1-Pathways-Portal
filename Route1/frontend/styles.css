@@ -3914,3 +3914,60 @@ a.btn:hover {
         align-items: flex-start;
     }
 }
+
+/* ── Direct crop orders (#/orders + listing-detail buy form) ─────────────────
+   Additive: reuses .card/.badge/.btn; only adds layout for the order list,
+   delivery block, and buy-form total. */
+.orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.order-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-bottom: .5rem;
+}
+
+.order-crop {
+    margin: 0;
+}
+
+.order-card-body p {
+    margin: .25rem 0;
+}
+
+.order-delivery {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    margin-top: .6rem;
+    padding: .6rem .75rem;
+    background: var(--sprout-soft, #eef3e8);
+    border-radius: var(--radius-md, 8px);
+    font-size: .92rem;
+}
+
+.order-delivery-label {
+    font-weight: 600;
+    color: var(--soil-soft, #6b6257);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-size: .72rem;
+}
+
+.order-card-actions {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin-top: .9rem;
+}
+
+.buy-total {
+    font-size: 1.05rem;
+    margin: .25rem 0 .75rem;
+}
