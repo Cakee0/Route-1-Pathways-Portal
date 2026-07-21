@@ -2659,9 +2659,12 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     /* 500 pts */
 }
 
-/* Tier labels hang off the silo's left edge, centered on their notch line */
+/* Tier labels hang off the silo's left edge, centered on their notch line.
+   row-reverse anchors the emoji badge nearest the silo so all three badges
+   line up in a clean column at their notches; the text reads to their left. */
 .tier-label {
     display: flex;
+    flex-direction: row-reverse;
     align-items: center;
     gap: .6rem;
     position: absolute;
@@ -2697,6 +2700,7 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
     display: flex;
     flex-direction: column;
     line-height: 1.3;
+    text-align: right;
 }
 
 .tier-info strong {
@@ -2863,6 +2867,21 @@ body[data-org-subtype="food_shelf"] .role-plate::before {
 /* Same full-bleed via a JS-set class — fallback for browsers without :has()
    (kept as a separate rule; a :has() selector in a list would invalidate it) */
 .main-content.is-landing {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* The login/auth screen is also a full-bleed atmosphere page — break it out of
+   the centered 1280px column so its dawn/sunset background fills the whole
+   viewport instead of sitting in a boxed rectangle around the card. */
+.main-content:has(> .auth-page) {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.main-content.is-auth {
     max-width: none;
     margin: 0;
     padding: 0;

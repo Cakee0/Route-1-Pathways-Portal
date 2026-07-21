@@ -221,10 +221,11 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260721d");
+            const res = await fetch(htmlPath + "?v=20260721e");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
+            appEl.classList.toggle("is-auth", page === "login");
             this._track("/" + page);
         } catch (e) {
             appEl.classList.remove("is-landing");
