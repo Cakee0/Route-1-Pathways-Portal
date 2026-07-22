@@ -257,7 +257,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260722b");
+            const res = await fetch(htmlPath + "?v=20260722c");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -2264,7 +2264,7 @@ const App = {
             try {
                 const d = await this.api("GET", `/donations/${donationId}`);
                 last = d;
-                if (d.status === "confirmed" || d.status === "refunded") return d;
+                if (["confirmed", "refunded", "expired"].includes(d.status)) return d;
             } catch {
                 // 401 is handled inside api() (redirects to login); stop polling.
                 return last;
@@ -2301,6 +2301,16 @@ const App = {
         <span style="font-size:2.5rem">↩️</span>
         <h2>Contribution refunded</h2>
         <p>This contribution was refunded. If that's unexpected, please get in touch and we'll help.</p>
+        <div class="load-error-actions">${backBtn}</div>`;
+        } else if (donation && donation.status === "expired") {
+            // Checkout was opened and never completed. No money moved, so this
+            // is an invitation to try again, not an error to apologise for.
+            document.title = "Checkout expired — Route 1 Pathways";
+            card.innerHTML = `
+        <span style="font-size:2.5rem">🌾</span>
+        <h2>That checkout expired</h2>
+        <p>You weren't charged. The wishlist item may still need funding — have another look
+           whenever you're ready.</p>
         <div class="load-error-actions">${backBtn}</div>`;
         } else {
             // Still pending / timed out — payment likely succeeded but the

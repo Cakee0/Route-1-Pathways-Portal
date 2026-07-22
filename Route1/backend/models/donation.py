@@ -36,6 +36,10 @@ class DonationStatusEnum(str, enum.Enum):
     pending   = "pending"    # payment initiated, not confirmed
     confirmed = "confirmed"  # payment confirmed, points awarded
     refunded  = "refunded"   # group failed / org cancelled
+    # Checkout was opened and abandoned — the Stripe session expired without
+    # payment. A normal outcome (people close the tab), not an error, and
+    # distinct from `refunded`, where money actually moved and came back.
+    expired   = "expired"
 
 
 class GroupDonationStatusEnum(str, enum.Enum):

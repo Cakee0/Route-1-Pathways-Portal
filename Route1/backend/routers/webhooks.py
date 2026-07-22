@@ -10,10 +10,16 @@ from anything else (the browser success redirect can be forged or dropped).
 Handled events:
   checkout.session.completed          — card payment finished (payment_status=paid)
   checkout.session.async_payment_succeeded — delayed method cleared later
+  checkout.session.expired            — checkout abandoned; retire the donation
 
-Both funnel into confirm_paid_donation(), which is idempotent, so Stripe's
-at-least-once delivery (retries) can never double-count a donation or double-
-award points.
+The paid events funnel into confirm_paid_donation() / confirm_paid_order(),
+which are idempotent, so Stripe's at-least-once delivery (retries) can never
+double-count a donation or double-award points.
+
+NOTE: `checkout.session.expired` must be enabled on the endpoint in the Stripe
+dashboard for the expiry path to fire. Without it nothing breaks — donations are
+also swept by expire_stale_pending_donations() — they just linger a little
+longer before being retired.
 """
 
 import logging
@@ -22,7 +28,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from routers.donations import confirm_paid_donation
+from routers.donations import confirm_paid_donation, expire_donation
 from routers.orders import confirm_paid_order
 from utils import payments
 
@@ -57,6 +63,26 @@ async def stripe_webhook(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature.")
 
     event_type = event.get("type")
+
+    # Abandoned checkout: Stripe expires the session ~24h after it was opened.
+    # Retire the donation so it doesn't sit "pending" for ever. Orders are left
+    # alone deliberately — an approved order can be paid from a fresh session,
+    # so an expired one isn't the end of it.
+    if event_type == "checkout.session.expired":
+        session = event["data"]["object"]
+        meta = session.get("metadata") or {}
+        if meta.get("kind") == "order":
+            logger.info("Stripe webhook: order session %s expired — order left payable.",
+                        session.get("id"))
+            return {"received": True, "handled": False}
+        donation_id = _extract_int(meta.get("donation_id") or session.get("client_reference_id"))
+        if donation_id is None:
+            logger.warning("Stripe webhook: expired session %s has no donation_id.", session.get("id"))
+            return {"received": True, "handled": False}
+        changed = expire_donation(db, donation_id)
+        logger.info("Stripe webhook: donation_id=%s expiry handled (changed=%s)", donation_id, changed)
+        return {"received": True, "handled": changed}
+
     if event_type not in _PAID_EVENTS:
         # Acknowledge unhandled events with 200 so Stripe stops retrying them.
         logger.info("Stripe webhook: ignoring event type %s", event_type)

@@ -24,6 +24,7 @@ Endpoints:
 """
 
 import logging
+from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -193,8 +194,9 @@ def join_group_donation(
         prior = existing.donation
         if prior and prior.status == DonationStatusEnum.confirmed:
             raise HTTPException(status_code=409, detail="You have already contributed to this group donation.")
-        # Discard the stale pending attempt and its unpaid donation row.
-        if prior and prior.status == DonationStatusEnum.pending:
+        # Discard the stale attempt and its unpaid donation row. `expired`
+        # counts as stale too — it's a pending attempt we already swept.
+        if prior and prior.status in (DonationStatusEnum.pending, DonationStatusEnum.expired):
             db.delete(prior)
         db.delete(existing)
         db.flush()
@@ -278,6 +280,9 @@ def my_donations(
     current_user: User = Depends(get_current_user),
 ) -> List[DonationResponse]:
     _require_consumer(current_user)
+    # Safety net for abandoned checkouts whose expiry event never arrived, so
+    # the history a consumer reads is never stuck showing a dead "pending".
+    expire_stale_pending_donations(db)
     donations = (
         db.query(Donation)
         .options(joinedload(Donation.points_entry))
@@ -385,6 +390,71 @@ def _open_checkout(
 
 # ── Confirmation (called ONLY by the Stripe webhook) ──────────────────────────
 
+# ── Abandoned checkouts ───────────────────────────────────────────────────────
+#
+# Opening Stripe Checkout and closing the tab is a normal thing to do, and it
+# leaves a `pending` donation behind. Two mechanisms retire those:
+#
+#   1. Stripe's `checkout.session.expired` event (routers/webhooks.py) — the
+#      precise one, fired ~24h after the session was created.
+#   2. The sweep below, as a safety net for rows whose event never arrived
+#      (webhook downtime, or donations predating this feature).
+#
+# Neither touches money or progress counters: a pending donation has never
+# incremented a wishlist total, a group's pledged amount, or anyone's points —
+# those only move in confirm_paid_donation.
+
+# Stripe sessions last 24h; leave a margin so this never races the real event.
+_STALE_AFTER = timedelta(hours=26)
+
+
+def expire_donation(db: Session, donation_id: int) -> bool:
+    """Retire one abandoned donation. Returns True if it changed anything."""
+    donation = (
+        db.query(Donation)
+        .filter(Donation.id == donation_id)
+        .with_for_update()
+        .first()
+    )
+    if not donation or donation.status != DonationStatusEnum.pending:
+        return False   # already confirmed, refunded, or expired — leave it alone
+
+    donation.status = DonationStatusEnum.expired
+
+    # A group contribution also holds a participant slot. Release it, or the
+    # consumer can never re-join the group they abandoned.
+    if donation.group_donation_id:
+        db.query(GroupDonationParticipant).filter(
+            GroupDonationParticipant.donation_id == donation.id
+        ).delete(synchronize_session=False)
+
+    db.commit()
+    logger.info("Donation %s expired (checkout abandoned).", donation_id)
+    return True
+
+
+def expire_stale_pending_donations(db: Session) -> int:
+    """
+    Safety net: retire pending donations older than the Stripe session lifetime.
+    Cheap enough to call on a read path — it's one indexed UPDATE, and matches
+    nothing on the overwhelming majority of calls.
+    """
+    cutoff = datetime.utcnow() - _STALE_AFTER
+    stale = (
+        db.query(Donation)
+        .filter(Donation.status == DonationStatusEnum.pending,
+                Donation.created_at < cutoff)
+        .all()
+    )
+    count = 0
+    for d in stale:
+        if expire_donation(db, d.id):
+            count += 1
+    if count:
+        logger.info("Swept %d stale pending donation(s).", count)
+    return count
+
+
 def confirm_paid_donation(db: Session, donation_id: int, payment_intent_id: str | None) -> None:
     """
     Confirm a donation that Stripe reports as paid. Idempotent: safe to call
@@ -407,10 +477,16 @@ def confirm_paid_donation(db: Session, donation_id: int, payment_intent_id: str 
     if not donation:
         logger.warning("Webhook confirm: donation_id=%s not found — ignoring.", donation_id)
         return
-    if donation.status != DonationStatusEnum.pending:
+    # `expired` is accepted here on purpose: if money somehow lands after we've
+    # swept a donation as abandoned (a delayed payment method clearing, say),
+    # the payment must win over our own housekeeping. Never drop a real payment
+    # because of a timer.
+    if donation.status not in (DonationStatusEnum.pending, DonationStatusEnum.expired):
         # Already confirmed (webhook retry) or refunded — do nothing.
         logger.info("Webhook confirm: donation_id=%s already %s — no-op.", donation_id, donation.status)
         return
+    if donation.status == DonationStatusEnum.expired:
+        logger.info("Webhook confirm: donation_id=%s was expired but paid — confirming.", donation_id)
 
     donation.status = DonationStatusEnum.confirmed
     if payment_intent_id:
@@ -444,6 +520,22 @@ def confirm_paid_donation(db: Session, donation_id: int, payment_intent_id: str 
         if gd:
             gd.amount_pledged = float(gd.amount_pledged) + float(donation.amount)
             gd.donors_count = gd.donors_count + 1
+
+            # If this donation had been swept as abandoned, its participant row
+            # was released. Money arriving afterwards must restore the donor's
+            # place, or the group would count the amount but lose the person.
+            has_slot = (
+                db.query(GroupDonationParticipant)
+                .filter(GroupDonationParticipant.donation_id == donation.id)
+                .first()
+            )
+            if not has_slot:
+                db.add(GroupDonationParticipant(
+                    group_donation_id=gd.id,
+                    consumer_id=donation.consumer_id,
+                    donation_id=donation.id,
+                    amount_pledged=donation.amount,
+                ))
             if (
                 float(gd.amount_pledged) >= float(gd.total_required)
                 and gd.status == GroupDonationStatusEnum.open

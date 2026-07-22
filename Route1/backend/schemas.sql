@@ -626,3 +626,19 @@ ALTER TABLE `users`
 ALTER TABLE `users`
     ADD COLUMN `year_started` SMALLINT NULL
     AFTER `bio`;
+
+
+-- =============================================================================
+-- v5: donations gain an `expired` status.
+--
+-- Abandoned checkouts are normal — someone opens Stripe and closes the tab —
+-- but there was no state for it, so those rows sat `pending` forever and could
+-- only be cleared by hand. `expired` is distinct from `refunded`, which means
+-- money actually moved and came back.
+--
+-- MODIFY is naturally idempotent, so this is safe to re-run.
+-- =============================================================================
+
+ALTER TABLE `donations`
+    MODIFY COLUMN `status` ENUM('pending', 'confirmed', 'refunded', 'expired')
+    NOT NULL DEFAULT 'pending';
