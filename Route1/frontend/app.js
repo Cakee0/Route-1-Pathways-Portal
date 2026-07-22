@@ -90,6 +90,31 @@ const App = {
         return data;
     },
 
+    /**
+     * Multipart upload — the api() sibling for files.
+     * Deliberately does NOT set Content-Type: the browser has to generate the
+     * multipart boundary itself, and setting the header by hand breaks it.
+     */
+    async apiUpload(path, file, method = "POST") {
+        const form = new FormData();
+        form.append("file", file);
+
+        const headers = {};
+        if (this.token) headers["Authorization"] = `Bearer ${this.token}`;
+
+        const res = await fetch(`${API_BASE}${path}`, { method, headers, body: form });
+        if (res.status === 401 && this.token) {
+            this._clearAuth();
+            this._renderNav();
+            this.navigate("login");
+            this.showToast("Your session expired — please log in again.", "error");
+            throw new Error("Session expired.");
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        return data;
+    },
+
     // Login form uses OAuth2 password flow (form-encoded, not JSON)
     async apiLoginForm(email, password) {
         const form = new URLSearchParams({ username: email, password });
@@ -123,6 +148,7 @@ const App = {
     _hashFor(page, register = false, opts = {}) {
         if (register) return "#/register";
         if (page === "listing_detail") return "#/listing/" + opts.listingId;
+        if (page === "public_profile") return "#/u/" + opts.userId;
         const map = {
             landing: "#/",
             about: "#/about",
@@ -169,6 +195,15 @@ const App = {
                 ? this.navigate("listing_detail", { listingId: parseInt(listingMatch[1], 10) })
                 : this.navigate("login");
         }
+
+        // Member profiles are for the community, not the open web — same
+        // login gate as everything else.
+        const profileMatch = h.match(/^#\/u\/(\d+)$/);
+        if (profileMatch) {
+            return loggedIn
+                ? this.navigate("public_profile", { userId: parseInt(profileMatch[1], 10) })
+                : this.navigate("login");
+        }
         if (h === "#/login") return loggedIn ? this._navigateToHomeDashboard() : this.navigate("login");
         if (h === "#/register") return loggedIn ? this._navigateToHomeDashboard() : this.navigate("login", { register: true });
         if (h === "#/about") return this.navigate("about");
@@ -207,6 +242,7 @@ const App = {
             org_dashboard: "components/org_dashboard.html",
             consumer_dashboard: "components/consumer_dashboard.html",
             listing_detail: "components/listing_detail.html",
+            public_profile: "components/public_profile.html",
             messaging: "components/messaging.html",
             profile_settings: "components/profile_settings.html",
             points_rewards: "components/points_rewards.html",
@@ -221,7 +257,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260721e");
+            const res = await fetch(htmlPath + "?v=20260722a");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -256,6 +292,7 @@ const App = {
             org_dashboard: "Browse listings & wishlist — Route 1 Pathways",
             consumer_dashboard: "Browse listings — Route 1 Pathways",
             listing_detail: "Listing details — Route 1 Pathways",
+            public_profile: "Member profile — Route 1 Pathways",
             messaging: "Messages — Route 1 Pathways",
             profile_settings: "Profile settings — Route 1 Pathways",
             points_rewards: "My points — Route 1 Pathways",
@@ -279,6 +316,7 @@ const App = {
             org_dashboard: () => this.initBrowseDashboard("org"),
             consumer_dashboard: () => this.initConsumerDashboard(),
             listing_detail: () => this.initListingDetail(opts.listingId),
+            public_profile: () => this.initPublicProfile(opts.userId),
             messaging: () => this.initMessaging(),
             profile_settings: () => this.initProfileSettings(),
             points_rewards: () => this.initPointsRewards(),
@@ -435,7 +473,9 @@ const App = {
         </nav>
         <div class="header-spacer"></div>
         <div class="header-user">
-          <span class="user-chip" title="${this.user.email}">${displayName}</span>
+          <span class="user-chip" title="${this.user.email}">
+            ${this._avatar(this.user, "sm")}${this._esc(displayName)}
+          </span>
           <button class="btn btn-sm btn-ghost nav-link" data-page="profile_settings">⚙️ Profile</button>
           <button class="btn btn-sm btn-ghost" id="logoutBtn">Logout</button>
         </div>
@@ -450,6 +490,49 @@ const App = {
             .addEventListener("click", () => this.logout());
 
         this._refreshUnreadBadge();
+    },
+
+    /**
+     * A quiet prompt on the dashboard for accounts with no photo and no story.
+     * Without it the new fields just sit empty and nothing about the site
+     * actually changes. Dismissible, and it never comes back once dismissed —
+     * a nag that can't be silenced is worse than no nag.
+     */
+    _maybeShowProfileNudge() {
+        const u = this.user;
+        if (!u || u.avatar_url || u.bio) return;
+        if (localStorage.getItem("route1_profile_nudge_dismissed") === "1") return;
+
+        const host = document.querySelector("#app .dashboard");
+        if (!host || document.getElementById("profileNudge")) return;
+
+        const what = u.user_type === "farmer" ? "your farm"
+            : u.user_type === "organization" ? "who you serve"
+                : "why you give";
+
+        const card = document.createElement("div");
+        card.className = "card profile-nudge";
+        card.id = "profileNudge";
+        card.innerHTML = `
+      <div class="profile-nudge-body">
+        <h3>Add a photo and a line about ${what}</h3>
+        <p>People give to people. Profiles with a face and a few sentences get taken
+           up far more often than a name on its own.</p>
+      </div>
+      <div class="profile-nudge-actions">
+        <button class="btn btn-primary btn-sm" id="profileNudgeGo">Fill in my profile</button>
+        <button class="btn btn-ghost btn-sm" id="profileNudgeDismiss">Not now</button>
+      </div>`;
+
+        host.insertBefore(card, host.firstChild);
+
+        document.getElementById("profileNudgeGo")
+            .addEventListener("click", () => this.navigate("profile_settings"));
+        document.getElementById("profileNudgeDismiss")
+            .addEventListener("click", () => {
+                localStorage.setItem("route1_profile_nudge_dismissed", "1");
+                card.remove();
+            });
     },
 
     _updateNavActive(page) {
@@ -845,6 +928,8 @@ const App = {
         const subtitle = document.getElementById("farmerSubtitle");
         if (subtitle) subtitle.textContent = `Welcome, ${fname}! Manage your available produce.`;
 
+        this._maybeShowProfileNudge();
+
         // Load crops
         this._loadMyCrops();
 
@@ -996,6 +1081,7 @@ const App = {
        ═══════════════════════════════════════════════════════════════════════════ */
     initBrowseDashboard(role) {
         const user = this.user;
+        this._maybeShowProfileNudge();
         // Expose org sub-type to CSS for the role-plate accent (visual only)
         document.body.dataset.orgSubtype = (role === "org" && user.org_subtype) ? user.org_subtype : "";
         // Set heading context
@@ -1126,7 +1212,15 @@ const App = {
         <div class="farmer-card-body">
           ${snippet ? `<p class="listing-snippet">${snippet}</p>` : ""}
           ${badges.length ? `<div class="listing-badges">${badges.join("")}</div>` : ""}
-          <div class="listing-farmer-line">🌾 ${farm}${location ? ` · 📍 ${location}` : ""}</div>
+          <div class="listing-farmer-line">
+            ${this._avatar({
+                id: l.farmer_id,
+                avatar_url: l.farmer_avatar_url,
+                full_name: l.farmer_name,
+                organization_name: l.farm_name,
+            }, "sm")}
+            <span>${farm}${location ? ` · 📍 ${location}` : ""}</span>
+          </div>
         </div>
       </a>`;
     },
@@ -1211,6 +1305,12 @@ const App = {
         const farmName = f.organization_name ? this._esc(f.organization_name) : "";
         const location = [this._esc(f.location_city || ""), this._esc(f.location_region || "")]
             .filter(Boolean).join(", ") || "Location not specified";
+        const since = this._sinceLine({ ...f, user_type: "farmer" });
+        // First name on the button — "Message Emma" is warmer than "Message Farmer",
+        // and falls back cleanly when we only know a business name.
+        const farmerFirst = f.full_name
+            ? this._esc(f.full_name.trim().split(/\s+/)[0])
+            : "the farmer";
 
         return `
       <div class="card">
@@ -1230,30 +1330,28 @@ const App = {
         ${listed ? `<p class="listing-listed-date">Listed ${listed}</p>` : ""}
       </div>
 
-      <div class="card" aria-labelledby="listingFarmerHeading">
-        <h3 id="listingFarmerHeading" class="listing-farmer-heading">About the farmer</h3>
-        <div class="listing-detail-meta">
-          <div class="listing-detail-row">
-            <span class="listing-detail-label">Name</span>
-            <span class="listing-detail-value">${farmerName}</span>
-          </div>
-          ${farmName && farmName !== farmerName ? `
-          <div class="listing-detail-row">
-            <span class="listing-detail-label">Farm / business</span>
-            <span class="listing-detail-value">${farmName}</span>
-          </div>` : ""}
-          <div class="listing-detail-row">
-            <span class="listing-detail-label">Location</span>
-            <span class="listing-detail-value">📍 ${location}</span>
-          </div>
-          ${f.phone ? `
-          <div class="listing-detail-row">
-            <span class="listing-detail-label">Phone</span>
-            <span class="listing-detail-value"><a href="tel:${this._esc(f.phone)}">📞 ${this._esc(f.phone)}</a></span>
-          </div>` : ""}
-        </div>
+      <div class="card grower-card" aria-labelledby="listingFarmerHeading">
+        <h3 id="listingFarmerHeading" class="listing-farmer-heading">Who grew this</h3>
+
+        <a class="grower-head" href="#/u/${f.id}">
+          ${this._avatar({ ...f, user_type: "farmer" }, "md")}
+          <span class="grower-id">
+            <span class="grower-name">${farmerName}</span>
+            ${farmName && farmName !== farmerName ? `<span class="grower-org">${farmName}</span>` : ""}
+            ${f.tagline ? `<span class="grower-tagline">${this._esc(f.tagline)}</span>` : ""}
+          </span>
+        </a>
+
+        <p class="grower-meta">📍 ${location}${since ? ` · ${since}` : ""}</p>
+
+        ${f.bio ? `<p class="grower-bio">${this._esc(
+            f.bio.length > 320 ? f.bio.slice(0, 320) + "…" : f.bio
+        )}</p>` : ""}
+
         <div class="listing-detail-actions">
-          <button class="btn btn-primary" id="msgFarmerBtn">💬 Message Farmer</button>
+          <button class="btn btn-primary" id="msgFarmerBtn">💬 Message ${farmerFirst}</button>
+          <a class="btn btn-ghost" href="#/u/${f.id}">View full profile</a>
+          ${f.phone ? `<a class="btn btn-ghost" href="tel:${this._esc(f.phone)}">📞 ${this._esc(f.phone)}</a>` : ""}
         </div>
       </div>
 
@@ -1543,6 +1641,111 @@ const App = {
     },
 
     /* ═══════════════════════════════════════════════════════════════════════════
+       PAGE: PUBLIC PROFILE (#/u/<id>)
+       The person behind the listing — face, story, and what they have open.
+       ═══════════════════════════════════════════════════════════════════════════ */
+    async initPublicProfile(id) {
+        const loading = document.getElementById("pubProfileLoading");
+        const errBox = document.getElementById("pubProfileError");
+        const content = document.getElementById("pubProfileContent");
+
+        const goBack = () => (history.length > 1 ? history.back() : this._navigateToHomeDashboard());
+        document.getElementById("profileBackBtn")?.addEventListener("click", goBack);
+        document.getElementById("pubProfileErrorBackBtn")?.addEventListener("click", goBack);
+
+        try {
+            const p = await this.api("GET", `/profiles/${id}`);
+            loading.classList.add("hidden");
+
+            const who = p.full_name || p.organization_name || "Member";
+            document.title = `${who} — Route 1 Pathways`;
+            content.innerHTML = this._renderPublicProfile(p);
+            content.classList.remove("hidden");
+
+            document.getElementById("profileMsgBtn")?.addEventListener("click", () => {
+                this.pendingMessageTo = { id: p.id, name: who };
+                this.navigate("messaging");
+            });
+
+            // Their open listings sit below the story — the farmer first, then
+            // what they have. Failure here must not blank the profile.
+            if (p.user_type === "farmer") this._loadProfileListings(p.id);
+        } catch (err) {
+            loading.classList.add("hidden");
+            errBox.classList.remove("hidden");
+            console.error("Profile load failed:", err);
+        }
+    },
+
+    _renderPublicProfile(p) {
+        const name = this._esc(p.full_name || p.organization_name || "Member");
+        const org = p.organization_name && p.organization_name !== p.full_name
+            ? this._esc(p.organization_name) : "";
+        const location = [this._esc(p.location_city || ""), this._esc(p.location_region || "")]
+            .filter(Boolean).join(", ");
+        const since = this._sinceLine(p);
+        const member = p.member_since
+            ? new Date(p.member_since).toLocaleDateString(undefined, { year: "numeric", month: "long" })
+            : "";
+
+        const roleLabel = { farmer: "Farmer", organization: "Organization", consumer: "Supporter" }[p.user_type] || "";
+
+        // Meta line: only the parts that exist, so a sparse profile doesn't
+        // render as a row of orphaned separators.
+        const meta = [
+            location ? `📍 ${location}` : "",
+            since,
+            member ? `On Route 1 since ${this._esc(member)}` : "",
+        ].filter(Boolean).join(" · ");
+
+        return `
+      <div class="card profile-hero">
+        <div class="profile-hero-head">
+          ${this._avatar(p, "lg")}
+          <div class="profile-hero-id">
+            ${roleLabel ? `<span class="profile-role">${roleLabel}</span>` : ""}
+            <h2 class="profile-name">${name}</h2>
+            ${org ? `<p class="profile-org">${org}</p>` : ""}
+            ${p.tagline ? `<p class="profile-tagline">${this._esc(p.tagline)}</p>` : ""}
+            ${meta ? `<p class="profile-meta">${meta}</p>` : ""}
+          </div>
+        </div>
+
+        ${p.bio ? `
+        <div class="profile-story">
+          <h3 class="profile-story-heading">Their story</h3>
+          <p>${this._esc(p.bio).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>
+        </div>` : ""}
+
+        <div class="profile-actions">
+          ${p.id !== this.user?.id
+                ? `<button class="btn btn-primary" id="profileMsgBtn">💬 Send a message</button>` : ""}
+          ${p.phone ? `<a class="btn btn-ghost" href="tel:${this._esc(p.phone)}">📞 ${this._esc(p.phone)}</a>` : ""}
+        </div>
+      </div>
+
+      ${p.user_type === "farmer" ? `
+      <div class="card" id="profileListingsCard">
+        <h3 class="card-title">What they have available</h3>
+        <div id="profileListings"><div class="spinner"></div></div>
+      </div>` : ""}`;
+    },
+
+    async _loadProfileListings(farmerId) {
+        const box = document.getElementById("profileListings");
+        if (!box) return;
+        try {
+            const listings = await this.api("GET", "/listings");
+            const theirs = listings.filter(l => l.farmer_id === farmerId);
+            box.innerHTML = theirs.length
+                ? `<div class="farmer-grid">${theirs.map(l => this._renderListingCard(l)).join("")}</div>`
+                : `<p class="muted">Nothing listed right now — check back soon.</p>`;
+        } catch {
+            box.innerHTML = `<p class="muted">Couldn't load their listings.</p>`;
+        }
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════════════
        PAGE: MESSAGING
        ═══════════════════════════════════════════════════════════════════════════ */
     initMessaging() {
@@ -1595,12 +1798,20 @@ const App = {
                 const time = c.last_message_at
                     ? new Date(c.last_message_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                     : "";
+                const who = c.other_user_name || `User ${c.other_user_id}`;
                 return `
           <li class="conv-item" data-conv-id="${this._esc(c.conversation_id)}"
               data-other-id="${c.other_user_id}"
-              data-other-name="${this._esc(c.other_user_name || `User ${c.other_user_id}`)}">
-            <div class="conv-name">${this._esc(c.other_user_name || `User ${c.other_user_id}`)}</div>
-            <div class="conv-preview">${this._esc(c.last_message || "")}</div>
+              data-other-name="${this._esc(who)}">
+            ${this._avatar({
+                    id: c.other_user_id,
+                    avatar_url: c.other_user_avatar_url,
+                    full_name: c.other_user_name,
+                }, "sm")}
+            <div class="conv-body">
+              <div class="conv-name">${this._esc(who)}</div>
+              <div class="conv-preview">${this._esc(c.last_message || "")}</div>
+            </div>
             <div class="conv-meta">
               <span>${time}</span>
               ${c.unread_count > 0
@@ -2355,6 +2566,16 @@ const App = {
         document.getElementById("profileRole").textContent = roleLabel;
         document.getElementById("profileSince").textContent = "—";
 
+        // "Year you started" means something different per role
+        const yearLabel = document.getElementById("yearStartedLabel");
+        if (yearLabel) {
+            yearLabel.textContent = isFarmer ? "Farming since"
+                : user.user_type === "organization" ? "Serving the community since"
+                    : "On Route 1 since";
+        }
+        document.getElementById("profileYearStarted")
+            ?.setAttribute("max", String(new Date().getFullYear()));
+
         // Load full profile from API
         try {
             const profile = await this.api("GET", "/profiles/me");
@@ -2363,7 +2584,15 @@ const App = {
             document.getElementById("profileCity").value = profile.location_city || "";
             document.getElementById("profileRegion").value = profile.location_region || "";
             document.getElementById("profilePhone").value = profile.phone || "";
+            document.getElementById("profileTagline").value = profile.tagline || "";
+            document.getElementById("profileBio").value = profile.bio || "";
+            document.getElementById("profileYearStarted").value = profile.year_started || "";
+            this._paintAvatarEditor(profile);
         } catch { /* pre-fill from cache */ }
+
+        this._wireAvatarEditor();
+        this._wireCharCounter("profileTagline", "taglineCount");
+        this._wireCharCounter("profileBio", "bioCount");
 
         // Show notification preferences only for consumers
         if (user.user_type === "consumer") {
@@ -2399,12 +2628,16 @@ const App = {
         successEl.classList.add("hidden");
         errEl.classList.add("hidden");
 
+        const year = document.getElementById("profileYearStarted").value.trim();
         const payload = {
             full_name: document.getElementById("profileFullName").value.trim() || null,
             organization_name: document.getElementById("profileOrgName").value.trim() || null,
             location_city: document.getElementById("profileCity").value.trim() || null,
             location_region: document.getElementById("profileRegion").value || null,
             phone: document.getElementById("profilePhone").value.trim() || null,
+            tagline: document.getElementById("profileTagline").value.trim() || null,
+            bio: document.getElementById("profileBio").value.trim() || null,
+            year_started: year ? parseInt(year, 10) : null,
         };
 
         if (this.user?.user_type === "farmer" && (!payload.location_city || !payload.location_region)) {
@@ -2423,6 +2656,85 @@ const App = {
             errEl.textContent = err.message;
             errEl.classList.remove("hidden");
         }
+    },
+
+    /* ── Avatar editor ────────────────────────────────────────────────────── */
+
+    _paintAvatarEditor(profile) {
+        const box = document.getElementById("avatarPreview");
+        if (!box) return;
+        // Reuse the same renderer the rest of the site uses, so what you see
+        // here is exactly what everyone else sees.
+        box.innerHTML = this._avatar({ ...this.user, ...profile }, "lg");
+        document.getElementById("avatarRemoveBtn")
+            ?.classList.toggle("hidden", !profile?.avatar_url);
+    },
+
+    _wireAvatarEditor() {
+        const input = document.getElementById("avatarInput");
+        const chooseBtn = document.getElementById("avatarChooseBtn");
+        const removeBtn = document.getElementById("avatarRemoveBtn");
+        const errEl = document.getElementById("avatarError");
+        if (!input || !chooseBtn) return;
+
+        chooseBtn.addEventListener("click", () => input.click());
+
+        input.addEventListener("change", async () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            errEl.classList.add("hidden");
+
+            // Check the size here as well as on the server: a 12 MB photo over
+            // a rural connection is a slow way to find out it was rejected.
+            if (file.size > 5 * 1024 * 1024) {
+                errEl.textContent = "That photo is larger than 5 MB. Most phones can share a smaller copy.";
+                errEl.classList.remove("hidden");
+                input.value = "";
+                return;
+            }
+
+            chooseBtn.disabled = true;
+            chooseBtn.textContent = "Uploading…";
+            try {
+                const updated = await this.apiUpload("/profiles/me/avatar", file);
+                this._saveAuth(this.token, { ...this.user, ...updated });
+                this._paintAvatarEditor(updated);
+                this._renderNav();
+                this.showToast("Photo updated.");
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove("hidden");
+            } finally {
+                chooseBtn.disabled = false;
+                chooseBtn.textContent = "Choose a photo";
+                input.value = "";
+            }
+        });
+
+        removeBtn?.addEventListener("click", async () => {
+            removeBtn.disabled = true;
+            try {
+                const updated = await this.api("DELETE", "/profiles/me/avatar");
+                this._saveAuth(this.token, { ...this.user, ...updated });
+                this._paintAvatarEditor(updated);
+                this._renderNav();
+                this.showToast("Photo removed.");
+            } catch (err) {
+                this.showToast(err.message, "error");
+            } finally {
+                removeBtn.disabled = false;
+            }
+        });
+    },
+
+    /** Live "n/max" counter under a text field. */
+    _wireCharCounter(fieldId, countId) {
+        const field = document.getElementById(fieldId);
+        const out = document.getElementById(countId);
+        if (!field || !out) return;
+        const paint = () => { out.textContent = field.value.length; };
+        field.addEventListener("input", paint);
+        paint();
     },
 
     async _loadNotificationPrefs() {
@@ -2899,6 +3211,54 @@ const App = {
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;");
+    },
+
+    /* ── Avatars ──────────────────────────────────────────────────────────────
+       One helper behind every face on the site. With a photo it renders the
+       image; without one it falls back to initials on a coloured disc, so a
+       new account still reads as a person instead of an empty slot.
+
+       Colours are pine / field / sprout / soil — never harvest gold, which the
+       design system reserves for money and points. */
+    _AVATAR_TONES: ["av-pine", "av-field", "av-sprout", "av-soil", "av-clay"],
+
+    _initials(person) {
+        const name = (person?.full_name || person?.organization_name || "").trim();
+        if (!name) return "?";
+        const words = name.split(/\s+/).filter(Boolean);
+        const letters = words.length >= 2
+            ? words[0][0] + words[words.length - 1][0]
+            : name.slice(0, 2);
+        return letters.toUpperCase();
+    },
+
+    /**
+     * @param person  object with avatar_url + full_name / organization_name
+     * @param size    "sm" | "md" | "lg"
+     */
+    _avatar(person, size = "sm") {
+        const name = person?.full_name || person?.organization_name || "This member";
+        const cls  = `avatar avatar-${size}`;
+
+        if (person?.avatar_url) {
+            // Decorative here: the name is always adjacent in the markup, so an
+            // alt text would just make screen readers say it twice.
+            return `<img class="${cls}" src="${this._esc(person.avatar_url)}" alt=""
+                         loading="lazy" width="96" height="96">`;
+        }
+
+        // Stable per person, so someone's colour doesn't change between pages.
+        const tone = this._AVATAR_TONES[(Number(person?.id) || 0) % this._AVATAR_TONES.length];
+        return `<span class="${cls} avatar-initials ${tone}" aria-hidden="true"
+                     title="${this._esc(name)}">${this._esc(this._initials(person))}</span>`;
+    },
+
+    /** "Growing since 1994" — the phrasing shifts with the role. */
+    _sinceLine(person) {
+        if (!person?.year_started) return "";
+        const verb = person.user_type === "farmer" ? "Growing" :
+                     person.user_type === "organization" ? "Serving" : "Here";
+        return `${verb} since ${this._esc(person.year_started)}`;
     },
 };
 

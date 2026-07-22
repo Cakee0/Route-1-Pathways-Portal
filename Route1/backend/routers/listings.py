@@ -58,6 +58,7 @@ def browse_listings(
             farmer_id             = c.farmer.id,
             farmer_name           = c.farmer.full_name or c.farmer.organization_name,
             farm_name             = c.farmer.organization_name,
+            farmer_avatar_url     = c.farmer.avatar_url,
             location_city         = c.farmer.location_city,
             location_region       = c.farmer.location_region,
         )

@@ -10,6 +10,9 @@ Read this before changing anything that ships. The full as-built runbook is
 | Anything in `Route1/frontend` | `git push origin main`. GitHub Actions publishes to Pages automatically. **No SSH, no EC2, no systemctl.** |
 | Anything in `Route1/backend` | SSH in → `cd ~/pathways && git pull && sudo systemctl restart route1` |
 
+If `requirements.txt` changed, `uv pip install -r Route1/backend/requirements.txt` inside the
+venv **before** restarting, or the service comes back up crash-looping on a missing import.
+
 Restarting the `route1` service does nothing for a frontend change — it only restarts the API.
 The frontend and backend are not on the same machine (Pages vs. EC2).
 

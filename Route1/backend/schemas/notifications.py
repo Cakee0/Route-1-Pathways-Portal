@@ -2,10 +2,13 @@
 schemas/notifications.py — Pydantic schemas for notification preferences.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
+
+# Upper bound for year_started — a farm can't have started next year.
+_CURRENT_YEAR = date.today().year
 
 
 class NotificationPrefsUpdate(BaseModel):
@@ -47,6 +50,12 @@ class ProfileUpdateRequest(BaseModel):
     location_region:   Optional[str] = None
     phone:             Optional[str] = None
 
+    # The human layer. avatar_url is deliberately absent — it is set only by
+    # POST /profiles/me/avatar, so a client can't point it at an arbitrary URL.
+    tagline:      Optional[str] = Field(None, max_length=140)
+    bio:          Optional[str] = Field(None, max_length=2000)
+    year_started: Optional[int] = Field(None, ge=1800, le=_CURRENT_YEAR)
+
 
 class ProfileUpdateResponse(BaseModel):
     id:                int
@@ -57,5 +66,10 @@ class ProfileUpdateResponse(BaseModel):
     location_city:     Optional[str]
     location_region:   Optional[str]
     phone:             Optional[str]
+
+    avatar_url:   Optional[str]  = None
+    tagline:      Optional[str]  = None
+    bio:          Optional[str]  = None
+    year_started: Optional[int]  = None
 
     model_config = {"from_attributes": True}

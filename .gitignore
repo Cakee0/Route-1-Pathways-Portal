@@ -26,5 +26,9 @@ Thumbs.db
 *.local.md
 *.secrets.md
 
+# ── Local uploads ───────────────────────────────────────────────────────────
+# Dev-only avatar storage; production photos live in S3 (utils/storage.py).
+Route1/backend/media/
+
 # ── Logs ────────────────────────────────────────────────────────────────────
 *.log

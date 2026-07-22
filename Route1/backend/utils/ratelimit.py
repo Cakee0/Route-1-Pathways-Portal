@@ -20,6 +20,7 @@ DEFAULT_RULES = {
     ("POST", "/auth/google"):          (20, 300),
     ("POST", "/auth/google/complete"): (10, 3600),
     ("POST", "/messages"):             (20, 60),    # messaging spam
+    ("POST", "/profiles/me/avatar"):   (10, 3600),  # image processing + S3 cost
 }
 
 _SWEEP_INTERVAL = 600   # seconds between purges of idle IPs

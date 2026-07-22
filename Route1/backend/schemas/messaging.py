@@ -33,6 +33,7 @@ class ConversationSummary(BaseModel):
     conversation_id: str
     other_user_id:   int
     other_user_name: Optional[str]
+    other_user_avatar_url: Optional[str] = None   # NULL → initials avatar
     last_message:    Optional[str]
     last_message_at: Optional[datetime]
     unread_count:    int

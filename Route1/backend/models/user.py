@@ -10,7 +10,9 @@ Three user roles are supported:
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
+from sqlalchemy import (
+    Column, Integer, SmallInteger, String, Text, Boolean, DateTime, Enum,
+)
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -62,6 +64,13 @@ class User(Base):
     location_city     = Column(String(100), nullable=True)   # Minnesota city
     location_region   = Column(String(100), nullable=True)   # MN region (e.g. Twin Cities Metro)
     phone             = Column(String(30),  nullable=True)
+
+    # The human layer — what makes a listing a person rather than a row.
+    # All optional: an empty profile renders an initials avatar, never a gap.
+    avatar_url        = Column(String(512), nullable=True)   # full URL (S3), NULL → initials
+    tagline           = Column(String(140), nullable=True)   # one line under the name
+    bio               = Column(Text,        nullable=True)   # the story, in their own words
+    year_started      = Column(SmallInteger, nullable=True)  # → "Growing since 1994"
     is_active         = Column(Boolean, default=True)
     created_at        = Column(DateTime,  default=datetime.utcnow)
 

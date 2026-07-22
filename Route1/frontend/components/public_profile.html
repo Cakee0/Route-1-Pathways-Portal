@@ -1,0 +1,22 @@
+<!-- components/public_profile.html — One member's profile (#/u/<id>) -->
+
+<div class="dashboard profile-page">
+
+    <div class="page-header">
+        <button class="btn btn-ghost" id="profileBackBtn">← Back</button>
+    </div>
+
+    <div class="loading-state" id="pubProfileLoading">
+        <div class="spinner"></div>
+        <p>Loading profile…</p>
+    </div>
+
+    <div class="empty-state hidden" id="pubProfileError">
+        <span>🌾</span>
+        <p>That profile isn't available.</p>
+        <button class="btn btn-primary" id="pubProfileErrorBackBtn">Back</button>
+    </div>
+
+    <div id="pubProfileContent" class="hidden"></div>
+
+</div>

@@ -53,6 +53,7 @@ class ListingCardResponse(BaseModel):
     farmer_id:             int
     farmer_name:           Optional[str]
     farm_name:             Optional[str]   # farmer's organization_name
+    farmer_avatar_url:     Optional[str] = None   # NULL → card renders initials
     location_city:         Optional[str]
     location_region:       Optional[str]
 
@@ -60,10 +61,19 @@ class ListingCardResponse(BaseModel):
 
 
 class FarmerPublicInfo(BaseModel):
-    """Farmer block embedded in a listing detail response."""
+    """
+    Farmer block embedded in a listing detail response.
+
+    Carries the profile fields too, so the detail page can introduce a person
+    (face, tagline, story) without a second round-trip.
+    """
     id:                int
     full_name:         Optional[str]
     organization_name: Optional[str]   # farm / business name
+    avatar_url:        Optional[str] = None
+    tagline:           Optional[str] = None
+    bio:               Optional[str] = None
+    year_started:      Optional[int] = None
     location_city:     Optional[str]
     location_region:   Optional[str]
     phone:             Optional[str]

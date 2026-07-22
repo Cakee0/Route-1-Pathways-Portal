@@ -99,6 +99,7 @@ def list_conversations(
                 other_user_name = (
                     (other.full_name or other.organization_name) if other else None
                 ),
+                other_user_avatar_url = other.avatar_url if other else None,
                 last_message    = msg.content,
                 last_message_at = msg.created_at,
                 unread_count    = 0,

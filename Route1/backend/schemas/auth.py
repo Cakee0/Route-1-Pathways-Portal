@@ -144,4 +144,12 @@ class UserProfileResponse(BaseModel):
     is_active:         bool
     created_at:        datetime
 
+    # Carried on the login response so the client can render the user's own
+    # avatar in the header, and know whether to nudge them to fill their
+    # profile in, without a second request on every page load.
+    avatar_url:        Optional[str] = None
+    tagline:           Optional[str] = None
+    bio:               Optional[str] = None
+    year_started:      Optional[int] = None
+
     model_config = {"from_attributes": True}

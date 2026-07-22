@@ -15,6 +15,46 @@
         <!-- ── LEFT: PROFILE FORM ────────────────────────────────────────────── -->
         <div class="profile-main reveal">
 
+            <!-- ── PHOTO + STORY ─────────────────────────────────────────────── -->
+            <div class="card">
+                <h3 class="card-title">Your photo &amp; story</h3>
+                <p class="card-sub">This is what people see before they decide to work with you.
+                    A face and a couple of sentences do more than any other field on this page.</p>
+
+                <div class="avatar-editor">
+                    <div id="avatarPreview" class="avatar-preview"></div>
+                    <div class="avatar-editor-controls">
+                        <!-- Hidden input + button: file inputs can't be styled to match
+                             the rest of the interface -->
+                        <input type="file" id="avatarInput" accept="image/*" class="visually-hidden" />
+                        <button type="button" class="btn btn-secondary" id="avatarChooseBtn">Choose a photo</button>
+                        <button type="button" class="btn btn-ghost hidden" id="avatarRemoveBtn">Remove</button>
+                        <p class="avatar-hint">JPG or PNG, up to 5 MB. We resize it for you and strip
+                            location data from the file.</p>
+                        <p class="error-msg hidden" role="alert" id="avatarError"></p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="profileTagline">One line about you</label>
+                    <input type="text" id="profileTagline" maxlength="140"
+                        placeholder="Third-generation vegetable farm in Northfield" />
+                    <p class="field-hint"><span id="taglineCount">0</span>/140</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="profileBio">Your story</label>
+                    <textarea id="profileBio" rows="6" maxlength="2000"
+                        placeholder="What you grow, who you feed, why you started. Write it the way you'd say it out loud."></textarea>
+                    <p class="field-hint"><span id="bioCount">0</span>/2000</p>
+                </div>
+
+                <div class="form-group form-group-narrow">
+                    <label for="profileYearStarted" id="yearStartedLabel">Year you started</label>
+                    <input type="number" id="profileYearStarted" min="1800" placeholder="1994" />
+                </div>
+            </div>
+
             <div class="card">
                 <h3 class="card-title">Personal Information</h3>
                 <p class="card-sub">Update your name, location, and contact details.</p>

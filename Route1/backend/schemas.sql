@@ -600,3 +600,29 @@ CREATE TABLE IF NOT EXISTS `fulfillments` (
 )   ENGINE  = InnoDB
     CHARSET = utf8mb4
     COLLATE = utf8mb4_unicode_ci;
+
+
+-- =============================================================================
+-- v4 (human profiles): every account can carry a face and a story.
+--
+-- Identity used to be a name string, so a farmer, a food shelf and a donor all
+-- rendered identically. These four columns are what the profile pages, listing
+-- cards and conversation list read from. All NULL-able — an empty profile falls
+-- back to an initials avatar, never a broken image.
+-- =============================================================================
+
+ALTER TABLE `users`
+    ADD COLUMN `avatar_url` VARCHAR(512) NULL
+    AFTER `organization_name`;
+
+ALTER TABLE `users`
+    ADD COLUMN `tagline` VARCHAR(140) NULL
+    AFTER `avatar_url`;
+
+ALTER TABLE `users`
+    ADD COLUMN `bio` TEXT NULL
+    AFTER `tagline`;
+
+ALTER TABLE `users`
+    ADD COLUMN `year_started` SMALLINT NULL
+    AFTER `bio`;

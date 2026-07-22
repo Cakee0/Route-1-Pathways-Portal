@@ -9,6 +9,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # Import all model classes so SQLAlchemy registers them before create_tables()
 import models  # noqa: F401 — side-effect import; registers ORM metadata
@@ -22,6 +23,7 @@ from routers.donations import router as donations_router
 from routers.points import router as points_router
 from routers.orders import router as orders_router
 from routers.webhooks import router as webhooks_router
+from utils import storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -85,6 +87,16 @@ app.include_router(donations_router)
 app.include_router(points_router)
 app.include_router(orders_router)
 app.include_router(webhooks_router)
+
+# ── Local avatar serving (development only) ──────────────────────────────────
+# In production avatars live in S3 and are served from there. With
+# AVATAR_BUCKET unset, utils/storage.py writes to ./media instead and returns
+# /media/... URLs — mount that directory so those URLs resolve locally.
+if not storage.is_configured():
+    _media = os.path.join(os.path.dirname(__file__), "media")
+    os.makedirs(_media, exist_ok=True)
+    app.mount("/media", StaticFiles(directory=_media), name="media")
+    logger.info("AVATAR_BUCKET unset — serving profile photos from ./media")
 
 
 # ── Health checks ─────────────────────────────────────────────────────────────
