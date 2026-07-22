@@ -257,7 +257,7 @@ const App = {
         try {
             // Versioned URL does the cache-busting; letting the HTTP cache work
             // makes repeat navigations instant (was cache: "no-store")
-            const res = await fetch(htmlPath + "?v=20260722a");
+            const res = await fetch(htmlPath + "?v=20260722b");
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             appEl.innerHTML = await res.text();
             appEl.classList.toggle("is-landing", page === "landing");
@@ -1202,6 +1202,13 @@ const App = {
         if (l.donation_eligible) badges.push('<span class="badge badge-green">🎁 Donation eligible</span>');
         if (l.can_provide_transport) badges.push('<span class="badge badge-amber">🚚 Can transport</span>');
 
+        // Approved-but-unpaid stock is still in quantity_available, so say so
+        // rather than letting the headline number overpromise.
+        const pending = Number(l.quantity_pending) || 0;
+        const pendingNote = pending > 0
+            ? `<div class="listing-pending">${this._esc(pending)} ${this._esc(l.quantity_unit)} pending payment · ${this._esc(Math.max(0, Number(l.quantity_available) - pending))} ${this._esc(l.quantity_unit)} still open</div>`
+            : "";
+
         return `
       <a class="farmer-card listing-card" href="#/listing/${l.id}"
         aria-label="${crop}, ${qty}, ${this._esc(price)}, from ${farm}">
@@ -1211,6 +1218,7 @@ const App = {
         </div>
         <div class="farmer-card-body">
           ${snippet ? `<p class="listing-snippet">${snippet}</p>` : ""}
+          ${pendingNote}
           ${badges.length ? `<div class="listing-badges">${badges.join("")}</div>` : ""}
           <div class="listing-farmer-line">
             ${this._avatar({
@@ -1288,6 +1296,10 @@ const App = {
     _renderListingDetail(l) {
         const crop = this._esc(l.crop_name);
         const qty = `${this._esc(l.quantity_available)} ${this._esc(l.quantity_unit)}`;
+        // Some of quantity_available may already be promised to another buyer:
+        // it only leaves the listing once that buyer pays.
+        const pending = Number(l.quantity_pending) || 0;
+        const open = Math.max(0, Number(l.quantity_available) - pending);
         const price = l.price_per_unit != null
             ? `$${Number(l.price_per_unit).toFixed(2)} / ${this._esc(l.quantity_unit)}`
             : "Price on request";
@@ -1320,11 +1332,21 @@ const App = {
             <span class="listing-detail-label">Quantity</span>
             <span class="listing-detail-value">${qty}</span>
           </div>
+          ${pending > 0 ? `
+          <div class="listing-detail-row">
+            <span class="listing-detail-label">Still open</span>
+            <span class="listing-detail-value">${this._esc(open)} ${this._esc(l.quantity_unit)}
+              <span class="listing-pending-inline">${this._esc(pending)} ${this._esc(l.quantity_unit)} pending payment</span>
+            </span>
+          </div>` : ""}
           <div class="listing-detail-row">
             <span class="listing-detail-label">Price</span>
             <span class="listing-detail-value listing-price">${price}</span>
           </div>
         </div>
+        ${pending > 0 && open <= 0 ? `
+        <p class="listing-allspoken">Every ${this._esc(l.quantity_unit)} of this listing is spoken for and
+          awaiting payment. If those orders fall through it will open up again — or message the farmer.</p>` : ""}
         ${badges.length ? `<div class="listing-badges">${badges.join("")}</div>` : ""}
         <p class="listing-description">${l.description ? this._esc(l.description) : "No description provided."}</p>
         ${listed ? `<p class="listing-listed-date">Listed ${listed}</p>` : ""}
@@ -1355,13 +1377,13 @@ const App = {
         </div>
       </div>
 
-      ${this.user?.user_type === "consumer" && l.price_per_unit != null && Number(l.quantity_available) > 0 ? `
+      ${this.user?.user_type === "consumer" && l.price_per_unit != null && open > 0 ? `
       <div class="card" id="buyCard">
         <h3 class="listing-farmer-heading">Buy this crop</h3>
         <p class="muted">Send a purchase request. The farmer approves it, then you pay securely by card — you'll arrange delivery together.</p>
         <div class="form-group">
-          <label for="buyQty">Quantity in ${this._esc(l.quantity_unit)} (up to ${Number(l.quantity_available)})</label>
-          <input type="number" id="buyQty" min="0.01" step="0.01" max="${Number(l.quantity_available)}" placeholder="e.g. 10" />
+          <label for="buyQty">Quantity in ${this._esc(l.quantity_unit)} (up to ${open})</label>
+          <input type="number" id="buyQty" min="0.01" step="0.01" max="${open}" placeholder="e.g. 10" />
         </div>
         <p class="buy-total">Estimated total: <strong id="buyTotal">$0.00</strong>
           <span class="muted">($${Number(l.price_per_unit).toFixed(2)} / ${this._esc(l.quantity_unit)})</span></p>

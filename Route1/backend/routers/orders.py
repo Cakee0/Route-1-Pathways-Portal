@@ -21,6 +21,7 @@ import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -94,6 +95,62 @@ def _order_response(o: CropOrder) -> OrderResponse:
     )
 
 
+# ── Stock commitments ─────────────────────────────────────────────────────────
+#
+# quantity_available only drops when money arrives (confirm_paid_order). Between
+# a farmer approving an order and the buyer paying, that quantity is *promised*
+# but still sitting in the listing — so without this, a farmer could approve two
+# buyers for the same 200 lbs and whoever paid second would be told, after
+# paying, that their corn is gone.
+#
+# An approved-but-unpaid order is therefore treated as committed stock: it can't
+# be promised again, and browse shows it as pending so buyers see the real
+# picture rather than a number that isn't really for sale.
+
+_COMMITTING_STATUSES = (OrderStatusEnum.approved,)
+
+
+def committed_quantity(db: Session, crop_id: int, exclude_order_id: int | None = None) -> float:
+    """Quantity of `crop_id` already approved and awaiting payment."""
+    q = (
+        db.query(func.coalesce(func.sum(CropOrder.quantity), 0))
+        .filter(CropOrder.crop_id == crop_id,
+                CropOrder.status.in_(_COMMITTING_STATUSES))
+    )
+    if exclude_order_id is not None:
+        q = q.filter(CropOrder.id != exclude_order_id)
+    return float(q.scalar() or 0)
+
+
+def committed_quantities(db: Session, crop_ids) -> dict[int, float]:
+    """Batch form for the browse grid — one query instead of one per card."""
+    ids = list(crop_ids)
+    if not ids:
+        return {}
+    rows = (
+        db.query(CropOrder.crop_id, func.coalesce(func.sum(CropOrder.quantity), 0))
+        .filter(CropOrder.crop_id.in_(ids),
+                CropOrder.status.in_(_COMMITTING_STATUSES))
+        .group_by(CropOrder.crop_id)
+        .all()
+    )
+    return {cid: float(total or 0) for cid, total in rows}
+
+
+def uncommitted_quantity(db: Session, crop, exclude_order_id: int | None = None) -> float:
+    """What's genuinely still for sale: on hand minus already promised."""
+    return float(crop.quantity_available) - committed_quantity(db, crop.id, exclude_order_id)
+
+
+def _short_supply_detail(free: float, crop) -> str:
+    pending = float(crop.quantity_available) - free
+    unit = crop.quantity_unit
+    if pending > 0:
+        return (f"Only {free:g} {unit} are still unspoken for — "
+                f"{pending:g} {unit} are approved and awaiting payment.")
+    return f"Only {free:g} {unit} are available."
+
+
 # ── POST /orders/ — consumer creates a purchase request ───────────────────────
 
 @router.post(
@@ -117,11 +174,12 @@ def create_order(
             status_code=422,
             detail="This listing is priced on request — message the farmer to arrange a price.",
         )
-    if payload.quantity > float(crop.quantity_available):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Only {float(crop.quantity_available):g} {crop.quantity_unit} are available.",
-        )
+    # Check against uncommitted stock, not the raw quantity: letting someone
+    # request corn that's already promised only creates a request the farmer
+    # is then forbidden to approve.
+    free = uncommitted_quantity(db, crop)
+    if payload.quantity > free:
+        raise HTTPException(status_code=422, detail=_short_supply_detail(free, crop))
 
     unit_price = float(crop.price_per_unit)
     total = round(payload.quantity * unit_price, 2)
@@ -208,6 +266,28 @@ def approve_order(
         raise HTTPException(status_code=404, detail="Order not found.")
     if order.status != OrderStatusEnum.pending_farmer:
         raise HTTPException(status_code=409, detail="This order is not awaiting your approval.")
+
+    # The commitment point. Stock may have been sold or promised since the
+    # request came in, so re-check here rather than trusting the check made at
+    # request time. `with_for_update()` on the crop row serialises two farmers'
+    # tabs approving at the same moment.
+    crop = (
+        db.query(FarmerCropInventory)
+        .filter(FarmerCropInventory.id == order.crop_id)
+        .with_for_update()
+        .first()
+    )
+    if not crop:
+        raise HTTPException(status_code=409, detail="That listing no longer exists.")
+
+    free = uncommitted_quantity(db, crop, exclude_order_id=order.id)
+    if float(order.quantity) > free:
+        raise HTTPException(
+            status_code=409,
+            detail=f"You can't approve this order. {_short_supply_detail(free, crop)} "
+                   "Decline it, or add more stock to the listing first.",
+        )
+
     order.status = OrderStatusEnum.approved
     db.commit()
     db.refresh(order)

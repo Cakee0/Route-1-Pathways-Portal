@@ -44,6 +44,10 @@ class ListingCardResponse(BaseModel):
     crop_name:             str
     # float so JSON carries a number: 200, not "200.00".
     quantity_available:    float
+    # Approved but not yet paid for. quantity_available only drops when payment
+    # lands, so without this the headline number reads as "all of this is for
+    # sale" when some of it is already promised.
+    quantity_pending:      float = 0
     quantity_unit:         str
     price_per_unit:        Optional[Decimal]   # None → "price on request"
     description:           Optional[str]
@@ -86,6 +90,7 @@ class ListingDetailResponse(BaseModel):
     id:                    int
     crop_name:             str
     quantity_available:    float
+    quantity_pending:      float = 0   # approved, awaiting payment
     quantity_unit:         str
     price_per_unit:        Optional[Decimal]   # None → "price on request"
     description:           Optional[str]

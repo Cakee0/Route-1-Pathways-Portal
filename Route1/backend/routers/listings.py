@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import FarmerCropInventory, User
 from routers.auth import get_current_user
+from routers.orders import committed_quantities, committed_quantity
 from routers.organizations import _query_available_crops
 from schemas.browse import FarmerPublicInfo, ListingCardResponse, ListingDetailResponse
 
@@ -44,11 +45,15 @@ def browse_listings(
     )
     crops.sort(key=lambda c: c.created_at, reverse=True)
 
+    # One grouped query for the whole grid rather than one per card.
+    pending = committed_quantities(db, (c.id for c in crops))
+
     return [
         ListingCardResponse(
             id                    = c.id,
             crop_name             = c.crop_name,
             quantity_available    = c.quantity_available,
+            quantity_pending      = pending.get(c.id, 0),
             quantity_unit         = c.quantity_unit,
             price_per_unit        = c.price_per_unit,
             description           = c.description,
@@ -96,6 +101,7 @@ def get_listing(
         id                    = crop.id,
         crop_name             = crop.crop_name,
         quantity_available    = crop.quantity_available,
+        quantity_pending      = committed_quantity(db, crop.id),
         quantity_unit         = crop.quantity_unit,
         price_per_unit        = crop.price_per_unit,
         description           = crop.description,
